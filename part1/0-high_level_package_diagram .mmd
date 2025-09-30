@@ -1,0 +1,24 @@
+classDiagram
+    %% ==========================================================
+    %% HBnB – High-Level Package Diagram (Mermaid)
+    %% Three-layer architecture with Facade pattern
+    %% ==========================================================
+
+    class PresentationLayer {
+        %% Services / API endpoints exposed to clients
+        <<Interface>>
+	    +EndpointAPI
+	    +ServiceAPI
+    }
+    class BusinessLogicLayer {
+        %% Core models (User, Place, Review, Amenity).
+	    +ModelClasses
+    }
+
+    class PersistenceLayer {
+	    +DatabaseAccess
+    }
+
+%% Presentation may ONLY call the Facade
+PresentationLayer --> BusinessLogicLayer : Facade Pattern
+BusinessLogicLayer --> PersistenceLayer : Database Operations
