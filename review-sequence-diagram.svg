@@ -1,0 +1,76 @@
+<svg viewBox="0 0 1000 650" xmlns="http://www.w3.org/2000/svg">
+  <!-- Styles -->
+  <defs>
+    <style>
+      .participant-box { fill: #fff; stroke: #000; stroke-width: 2; }
+      .participant-text { font-family: Arial, sans-serif; font-size: 16px; fill: #000; text-anchor: middle; }
+      .lifeline { stroke: #000; stroke-width: 1.5; }
+      .arrow { stroke: #000; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+      .return-arrow { stroke: #000; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead-left); }
+      .message-text { font-family: Arial, sans-serif; font-size: 13px; fill: #000; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#000" />
+    </marker>
+    <marker id="arrowhead-left" markerWidth="10" markerHeight="10" refX="1" refY="3" orient="auto">
+      <polygon points="10 0, 0 3, 10 6" fill="#000" />
+    </marker>
+  </defs>
+  
+  <!-- Participants -->
+  <rect x="50" y="20" width="140" height="60" class="participant-box"/>
+  <text x="120" y="55" class="participant-text">Client</text>
+  
+  <rect x="280" y="20" width="140" height="60" class="participant-box"/>
+  <text x="350" y="55" class="participant-text">API</text>
+  
+  <rect x="510" y="20" width="140" height="60" class="participant-box"/>
+  <text x="580" y="55" class="participant-text">Service</text>
+  
+  <rect x="740" y="20" width="140" height="60" class="participant-box"/>
+  <text x="810" y="55" class="participant-text">Review</text>
+  
+  <rect x="920" y="20" width="60" height="60" class="participant-box"/>
+  <text x="950" y="55" class="participant-text" font-size="14">Data-</text>
+  <text x="950" y="70" class="participant-text" font-size="14">base</text>
+  
+  <!-- Lifelines -->
+  <line x1="120" y1="80" x2="120" y2="600" class="lifeline"/>
+  <line x1="350" y1="80" x2="350" y2="600" class="lifeline"/>
+  <line x1="580" y1="80" x2="580" y2="600" class="lifeline"/>
+  <line x1="810" y1="80" x2="810" y2="600" class="lifeline"/>
+  <line x1="950" y1="80" x2="950" y2="600" class="lifeline"/>
+  
+  <!-- Messages -->
+  <!-- 1. Client to API -->
+  <line x1="120" y1="140" x2="350" y2="140" class="arrow"/>
+  <text x="235" y="130" class="message-text">POST /reviews (review data)</text>
+  
+  <!-- 2. API to Service -->
+  <line x1="350" y1="200" x2="580" y2="200" class="arrow"/>
+  <text x="465" y="190" class="message-text">validateAndProcessReview(data)</text>
+  
+  <!-- 3. Service to Review -->
+  <line x1="580" y1="260" x2="810" y2="260" class="arrow"/>
+  <text x="695" y="250" class="message-text">create_instance(data)</text>
+  
+  <!-- 4. Review to Database -->
+  <line x1="810" y1="320" x2="950" y2="320" class="arrow"/>
+  <text x="880" y="310" class="message-text">save()</text>
+  
+  <!-- 5. Database to Review (return) -->
+  <line x1="950" y1="380" x2="810" y2="380" class="return-arrow"/>
+  <text x="880" y="370" class="message-text">confirmation</text>
+  
+  <!-- 6. Review to Service (return) -->
+  <line x1="810" y1="440" x2="580" y2="440" class="return-arrow"/>
+  <text x="695" y="430" class="message-text">return review object</text>
+  
+  <!-- 7. Service to API (return) -->
+  <line x1="580" y1="500" x2="350" y2="500" class="return-arrow"/>
+  <text x="465" y="490" class="message-text">success response</text>
+  
+  <!-- 8. API to Client (return) -->
+  <line x1="350" y1="560" x2="120" y2="560" class="return-arrow"/>
+  <text x="235" y="550" class="message-text">201 Created (review info)</text>
+</svg>
