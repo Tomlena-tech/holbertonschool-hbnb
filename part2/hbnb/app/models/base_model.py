@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from abc import ABC
 
+
 class BaseModel(ABC):
     """Abstract base class with common attributes and methods"""
     
@@ -14,29 +15,45 @@ class BaseModel(ABC):
         self.updated_at = datetime.now()
     
     def save(self):
-        """Update the updated_at timestamp whenever the object is modified"""
+        """Update the updated_at timestamp"""
         self.updated_at = datetime.now()
     
     def delete(self):
-        """Delete the entity (to be implemented with repository)"""
+        """Delete the entity"""
         pass
     
-    def to_dict(self): #add to don't have to repeat in each class
+    def to_dict(self):
         """Convert object to dictionary representation
         
         Returns:
             dict: Dictionary with all attributes
         """
-        return {
-            'id': self.id,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
-        }
+        result = {}
+        for key, value in self.__dict__.items():
+            if key.startswith('_'):
+                continue
+            if isinstance(value, datetime):
+                result[key] = value.isoformat()
+            elif hasattr(value, 'id'):
+                result[key] = value.id
+            elif isinstance(value, list):
+                result[key] = [item.id if hasattr(item, 'id') else item for item in value]
+            else:
+                result[key] = value
+        return result
     
     def update(self, data):
-        """Update the attributes of the object based on the provided dictionary"""
+        """Update the attributes based on the provided dictionary
+        
+        Args:
+            data: Dictionary with attributes to update
+            
+        Returns:
+            self: The updated object
+        """
         for key, value in data.items():
-            if hasattr(self, key):
+            if hasattr(self, key) and not key.startswith('_'):
                 setattr(self, key, value)
         self.save()
         return self
+    
