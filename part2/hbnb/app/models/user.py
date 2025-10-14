@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """User - Business entity for HBnB project"""
-from models.base_model import BaseModel
+from app.models.base_model import BaseModel
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

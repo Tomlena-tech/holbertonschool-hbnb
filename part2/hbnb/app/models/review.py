@@ -40,4 +40,4 @@ class Review(BaseModel):
         
         # Add this review to the place
         place.add_review(self)
-         
+        
