@@ -4,7 +4,7 @@ from app.models.base_model import BaseModel
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from models.place import Place
+    from app.models.place import Place
 
 
 class User(BaseModel):
@@ -60,3 +60,4 @@ class User(BaseModel):
         """
         if place in self.places:
             self.places.remove(place)
+            
