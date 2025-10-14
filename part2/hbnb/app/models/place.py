@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """Place - Holberton-compliant"""
-from models.base_model import BaseModel
+from app.models.base_model import BaseModel
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
