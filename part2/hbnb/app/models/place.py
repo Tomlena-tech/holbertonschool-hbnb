@@ -15,7 +15,19 @@ class Place(BaseModel):
     def __init__(self, *, title: str, description: str,
                  price: float, latitude: float, longitude: float,
                  owner: "User"):
-        """Initialize a new place"""
+        """Initialize a new place
+        
+        Args:
+            title: Place title (required, max 100 characters)
+            description: Place description (optional)
+            price: Price per night (must be > 0)
+            latitude: Latitude coordinate (-90.0 to 90.0)
+            longitude: Longitude coordinate (-180.0 to 180.0)
+            owner: User object who owns this place
+            
+        Raises:
+            ValueError: If validation fails
+        """
         super().__init__()
         
         # Validate title
@@ -43,25 +55,45 @@ class Place(BaseModel):
         self.reviews = []
         self.amenities = []
         
-        # Sync bidirectional relationship
         owner.add_place(self)
-        # relations with reviews and amenities are managed in their respective classes
+
     def add_review(self, review: "Review") -> None:
-        """Add a review to this place"""
+        """Add a review to this place
+        
+        Args:
+            review: Review object to add
+        """
         if review not in self.reviews:
             self.reviews.append(review)
 
     def add_amenity(self, amenity: "Amenity") -> None:
-        """Add an amenity to this place"""
+        """Add an amenity to this place
+        
+        Args:
+            amenity: Amenity object to add
+        """
         if amenity not in self.amenities:
             self.amenities.append(amenity)
 
     def average_rating(self) -> float:
-        """Calculate average rating from reviews"""
+        """Calculate average rating from reviews
+        
+        Returns:
+            float: Average rating or 0.0 if no reviews
+        """
         if not self.reviews:
             return 0.0
         return sum(r.rating for r in self.reviews) / len(self.reviews)
 
     def is_available(self, start: str, end: str) -> bool:
-        """Check availability (stub)"""
+        """Check if place is available for given dates
+        
+        Args:
+            start: Start date string
+            end: End date string
+            
+        Returns:
+            bool: True if available (stub implementation)
+        """
         return True
+    
