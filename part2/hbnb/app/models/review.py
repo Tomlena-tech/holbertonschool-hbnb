@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 """Review model"""
-from models.base_model import BaseModel
+from app.models.base_model import BaseModel
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from models.place import Place
-    from models.user import User
+    from app.models.place import Place
+    from app.models.user import User
 
 
 class Review(BaseModel):
