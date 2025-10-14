@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """Amenity model"""
-from models.base_model import BaseModel
+from app.models.base_model import BaseModel
 
 
 class Amenity(BaseModel):
@@ -22,3 +22,4 @@ class Amenity(BaseModel):
             raise ValueError("Name is required and must not exceed 50 characters")
         
         self.name = name
+        
