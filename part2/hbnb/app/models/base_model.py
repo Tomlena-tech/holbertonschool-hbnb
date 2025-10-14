@@ -21,7 +21,7 @@ class BaseModel(ABC):
         """Delete the entity (to be implemented with repository)"""
         pass
     
-    def to_dict(self):
+    def to_dict(self): #add to don't have to repeat in each class
         """Convert object to dictionary representation
         
         Returns:
