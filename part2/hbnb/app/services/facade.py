@@ -1,4 +1,5 @@
 from app.persistence.repository import InMemoryRepository
+from datetime import datetime 
 
 class HBnBFacade:
     def __init__(self):
@@ -16,3 +17,14 @@ class HBnBFacade:
     def get_place(self, place_id):
         # Logic will be implemented in later tasks
         pass
+    
+    def update_user(self, user_id, user_data):
+        """Update a user by ID with the provided data."""
+        user = self.user_repo.get(user_id)
+        if not user:
+            return None
+        for key, value in user_data.items():
+            setattr(user, key, value)
+        user.updated_at = datetime.utcnow()
+        self.user_repo.save(user)
+        return user
