@@ -1,30 +1,34 @@
 from datetime import datetime
-from part2.hbnb.app.models.user import User
-from part2.hbnb.app.persistence.repository import InMemoryRepository 
+from app.models.user import User
+from part2.hbnb.app.persistence.repository import InMemoryRepository
 
 class HBnBFacade:
     def __init__(self):
-        self.user_repo = InMemoryRepository()
+        self.user_repo = InMemoryRepository[User]()
 
-
-    def create_user(self, user_data):
-        user = User(**user_data)
+    # ------ CRUD USER ------
+    def create_user(self, data: dict) -> User:
+        user = User(**data)          # ton __init__ fait toute la validation
         self.user_repo.add(user)
         return user
 
-    def get_user(self, user_id):
+    def get_user(self, user_id: str) -> User | None:
         return self.user_repo.get(user_id)
 
-    def get_user_by_email(self, email):
+    def get_user_by_email(self, email: str) -> User | None:
         return self.user_repo.get_by_attribute('email', email)
 
-    def update_user(self, user_id, user_data):
-        """Update a user by ID with the provided data."""
+    def get_all_users(self) -> list[User]:
+        return self.user_repo.list()
+
+    def update_user(self, user_id: str, data: dict) -> User | None:
         user = self.user_repo.get(user_id)
         if not user:
             return None
-        for key, value in user_data.items():
-            setattr(user, key, value)
+        # on autorise uniquement les champs publics
+        for key in ('first_name', 'last_name', 'email'):
+            if key in data:
+                setattr(user, key, data[key])
         user.updated_at = datetime.utcnow()
-        self.user_repo.save(user)
+        # pas besoin de .save() : objet déjà dans le dict
         return user
