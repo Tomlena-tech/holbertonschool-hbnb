@@ -1,14 +1,14 @@
-from datetime import datetime
+from app.persistence.repository import InMemoryRepository
 from app.models.user import User
-from part2.hbnb.app.persistence.repository import InMemoryRepository
+from datetime import datetime
 
 class HBnBFacade:
     def __init__(self):
-        self.user_repo = InMemoryRepository[User]()
+        self.user_repo = InMemoryRepository()
 
     # ------ CRUD USER ------
     def create_user(self, data: dict) -> User:
-        user = User(**data)          # ton __init__ fait toute la validation
+        user = User(**data)          
         self.user_repo.add(user)
         return user
 
@@ -19,16 +19,14 @@ class HBnBFacade:
         return self.user_repo.get_by_attribute('email', email)
 
     def get_all_users(self) -> list[User]:
-        return self.user_repo.list()
+        return self.user_repo.get_all()
 
     def update_user(self, user_id: str, data: dict) -> User | None:
         user = self.user_repo.get(user_id)
         if not user:
             return None
-        # on autorise uniquement les champs publics
-        for key in ('first_name', 'last_name', 'email'):
-            if key in data:
-                setattr(user, key, data[key])
+        # ton repo possède .update(data) → on l’utilise
+        self.user_repo.update(user_id, data)
         user.updated_at = datetime.utcnow()
-        # pas besoin de .save() : objet déjà dans le dict
         return user
+    
