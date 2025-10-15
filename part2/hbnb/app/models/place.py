@@ -1,53 +1,45 @@
 #!/usr/bin/python3
-"""Place - Holberton-compliant"""
+"""Place model with property validation"""
 from app.models.base_model import BaseModel
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from app.models.user import User
-    from app.models.review import Review
-    from app.models.amenity import Amenity
 
 
 class Place(BaseModel):
-    """Model representing a place in the HBnB system"""
+    """
+    Represents a place/accommodation in the system.
     
-    def __init__(self, *, title: str, description: str,
-                 price: float, latitude: float, longitude: float,
-                 owner: "User"):
-        """Initialize a new place
+    Inherits from:
+        BaseModel: Provides `id`, `created_at`, and `updated_at` attributes.
+    
+    Instance Attributes:
+        title (str): Place title (max 100 characters).
+        description (str): Place description (optional).
+        price (float): Price per night (must be > 0).
+        latitude (float): Latitude coordinate (-90.0 to 90.0).
+        longitude (float): Longitude coordinate (-180.0 to 180.0).
+        owner (User): User who owns this place.
+        reviews (list): List of reviews for this place.
+        amenities (list): List of amenities available.
+    """
+    
+    def __init__(self, title, description, price, latitude, longitude, owner):
+        """
+        Initialize a new Place instance.
         
         Args:
-            title: Place title (required, max 100 characters)
-            description: Place description (optional)
-            price: Price per night (must be > 0)
-            latitude: Latitude coordinate (-90.0 to 90.0)
-            longitude: Longitude coordinate (-180.0 to 180.0)
-            owner: User object who owns this place
+            title (str): The place title (max 100 characters).
+            description (str): Description of the place.
+            price (float): Price per night (must be > 0).
+            latitude (float): Latitude coordinate (-90.0 to 90.0).
+            longitude (float): Longitude coordinate (-180.0 to 180.0).
+            owner (User): The user who owns this place.
             
         Raises:
-            ValueError: If validation fails
+            TypeError: If argument types are incorrect.
+            ValueError: If values are out of valid range.
         """
         super().__init__()
-        
-        # Validate title
-        if not title or len(title) > 100:
-            raise ValueError("Title is required and must not exceed 100 characters")
-        
-        # Validate price
-        if price <= 0:
-            raise ValueError("Price must be greater than 0")
-        
-        # Validate latitude
-        if not -90.0 <= latitude <= 90.0:
-            raise ValueError("Latitude must be between -90.0 and 90.0")
-        
-        # Validate longitude
-        if not -180.0 <= longitude <= 180.0:
-            raise ValueError("Longitude must be between -180.0 and 180.0")
-        
         self.title = title
-        self.description = description or ""
+        self.description = description
         self.price = price
         self.latitude = latitude
         self.longitude = longitude
@@ -55,45 +47,176 @@ class Place(BaseModel):
         self.reviews = []
         self.amenities = []
         
+        # Sync bidirectional relationship
         owner.add_place(self)
-
-    def add_review(self, review: "Review") -> None:
-        """Add a review to this place
+    
+    @property
+    def title(self):
+        return self._title
+    
+    @title.setter
+    def title(self, value):
+        """
+        Validate and set the place title.
         
         Args:
-            review: Review object to add
+            value (str): The title to assign.
+            
+        Raises:
+            TypeError: If value is not a string.
+            ValueError: If title exceeds 100 characters.
+        """
+        if not isinstance(value, str):
+            raise TypeError("Title must be a string")
+        super().is_max_length("Title", value, 100)
+        self._title = value
+    
+    @property
+    def description(self):
+        return self._description
+    
+    @description.setter
+    def description(self, value):
+        """
+        Validate and set the place description.
+        
+        Args:
+            value (str): The description to assign.
+            
+        Raises:
+            TypeError: If value is not a string.
+        """
+        if not isinstance(value, str):
+            raise TypeError("Description must be a string")
+        self._description = value
+    
+    @property
+    def price(self):
+        return self._price
+    
+    @price.setter
+    def price(self, value):
+        """
+        Validate and set the price.
+        
+        Args:
+            value (float): The price to assign.
+            
+        Raises:
+            TypeError: If value is not a number.
+            ValueError: If price is not greater than 0.
+        """
+        if not isinstance(value, (int, float)):
+            raise TypeError("Price must be a number")
+        if value <= 0:
+            raise ValueError("Price must be greater than 0")
+        self._price = float(value)
+    
+    @property
+    def latitude(self):
+        return self._latitude
+    
+    @latitude.setter
+    def latitude(self, value):
+        """
+        Validate and set the latitude.
+        
+        Args:
+            value (float): The latitude to assign.
+            
+        Raises:
+            TypeError: If value is not a number.
+            ValueError: If latitude is not between -90.0 and 90.0.
+        """
+        if not isinstance(value, (int, float)):
+            raise TypeError("Latitude must be a number")
+        if not -90.0 <= value <= 90.0:
+            raise ValueError("Latitude must be between -90.0 and 90.0")
+        self._latitude = float(value)
+    
+    @property
+    def longitude(self):
+        return self._longitude
+    
+    @longitude.setter
+    def longitude(self, value):
+        """
+        Validate and set the longitude.
+        
+        Args:
+            value (float): The longitude to assign.
+            
+        Raises:
+            TypeError: If value is not a number.
+            ValueError: If longitude is not between -180.0 and 180.0.
+        """
+        if not isinstance(value, (int, float)):
+            raise TypeError("Longitude must be a number")
+        if not -180.0 <= value <= 180.0:
+            raise ValueError("Longitude must be between -180.0 and 180.0")
+        self._longitude = float(value)
+    
+    @property
+    def owner(self):
+        return self._owner
+    
+    @owner.setter
+    def owner(self, value):
+        """
+        Validate and set the owner.
+        
+        Args:
+            value: The User object who owns this place.
+            
+        Raises:
+            TypeError: If value is not a User instance.
+        """
+        from app.models.user import User
+        if not isinstance(value, User):
+            raise TypeError("Owner must be a User instance")
+        self._owner = value
+    
+    def add_review(self, review):
+        """
+        Add a review to this place.
+        
+        Args:
+            review (Review): A Review instance to associate.
         """
         if review not in self.reviews:
             self.reviews.append(review)
-
-    def add_amenity(self, amenity: "Amenity") -> None:
-        """Add an amenity to this place
+    
+    def add_amenity(self, amenity):
+        """
+        Add an amenity to this place.
         
         Args:
-            amenity: Amenity object to add
+            amenity (Amenity): An Amenity instance to associate.
         """
         if amenity not in self.amenities:
             self.amenities.append(amenity)
-
-    def average_rating(self) -> float:
-        """Calculate average rating from reviews
+    
+    def average_rating(self):
+        """
+        Calculate the average rating from all reviews.
         
         Returns:
-            float: Average rating or 0.0 if no reviews
+            float: Average rating or 0.0 if no reviews.
         """
         if not self.reviews:
             return 0.0
-        return sum(r.rating for r in self.reviews) / len(self.reviews)
-
-    def is_available(self, start: str, end: str) -> bool:
-        """Check if place is available for given dates
-        
-        Args:
-            start: Start date string
-            end: End date string
-            
-        Returns:
-            bool: True if available (stub implementation)
+        return sum(review.rating for review in self.reviews) / len(self.reviews)
+    
+    def to_dict(self):
         """
-        return True
+        Convert the Place instance into a dictionary.
+        
+        Returns:
+            dict: Dictionary containing place information.
+        """
+        result = super().to_dict()
+        # Ensure owner is represented by ID
+        if 'owner' in result and hasattr(self._owner, 'id'):
+            result['owner'] = self._owner.id
+        return result
     
