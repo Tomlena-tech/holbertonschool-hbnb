@@ -1,0 +1,10 @@
+# app/__init__.py  (lignes 1-2)
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# --- ensuite TES imports habituels ---
+from flask import Flask
+from flask_restx import Api
+from app.api.v1.users import api as users_ns
+...
