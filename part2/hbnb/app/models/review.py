@@ -37,9 +37,7 @@ class Review(BaseModel):
         self.place = place
         self.user = user
         
-        # Add this review to the place
         place.add_review(self)
-        # Add this review to the user
         user.add_review(self)
     
     @property

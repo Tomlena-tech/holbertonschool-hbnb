@@ -47,7 +47,6 @@ class Place(BaseModel):
         self.reviews = []
         self.amenities = []
         
-        # Sync bidirectional relationship
         owner.add_place(self)
     
     @property
@@ -64,11 +63,14 @@ class Place(BaseModel):
             
         Raises:
             TypeError: If value is not a string.
-            ValueError: If title exceeds 100 characters.
+            ValueError: If title is empty or exceeds 100 characters.
         """
         if not isinstance(value, str):
             raise TypeError("Title must be a string")
-        super().is_max_length("Title", value, 100)
+        if not value or not value.strip():
+            raise ValueError("Title is required")
+        if len(value) > 100:
+            raise ValueError("Title must not exceed 100 characters")
         self._title = value
     
     @property
@@ -215,7 +217,6 @@ class Place(BaseModel):
             dict: Dictionary containing place information.
         """
         result = super().to_dict()
-        # Ensure owner is represented by ID
         if 'owner' in result and hasattr(self._owner, 'id'):
             result['owner'] = self._owner.id
         return result

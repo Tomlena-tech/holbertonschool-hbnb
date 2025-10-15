@@ -23,7 +23,7 @@ class Amenity(BaseModel):
             
         Raises:
             TypeError: If name is not a string.
-            ValueError: If name exceeds 50 characters.
+            ValueError: If name is empty or exceeds 50 characters.
         """
         super().__init__()
         self.name = name
@@ -42,11 +42,14 @@ class Amenity(BaseModel):
             
         Raises:
             TypeError: If value is not a string.
-            ValueError: If name exceeds 50 characters.
+            ValueError: If name is empty or exceeds 50 characters.
         """
         if not isinstance(value, str):
             raise TypeError("Name must be a string")
-        super().is_max_length("Name", value, 50)
+        if not value or not value.strip():
+            raise ValueError("Name is required")
+        if len(value) > 50:
+            raise ValueError("Name must not exceed 50 characters")
         self._name = value
     
     def to_dict(self):
