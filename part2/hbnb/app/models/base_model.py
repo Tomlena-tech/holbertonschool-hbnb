@@ -22,6 +22,21 @@ class BaseModel(ABC):
         """Delete the entity"""
         pass
     
+    def is_max_length(self, field_name, value, max_length):
+        """
+        Helper method to validate maximum length.
+        
+        Args:
+            field_name (str): Name of the field being validated
+            value (str): The value to check
+            max_length (int): Maximum allowed length
+            
+        Raises:
+            ValueError: If value exceeds max_length
+        """
+        if len(value) > max_length:
+            raise ValueError(f"{field_name} must not exceed {max_length} characters")
+    
     def to_dict(self):
         """Convert object to dictionary representation
         
@@ -31,15 +46,25 @@ class BaseModel(ABC):
         result = {}
         for key, value in self.__dict__.items():
             if key.startswith('_'):
-                continue
-            if isinstance(value, datetime):
-                result[key] = value.isoformat()
-            elif hasattr(value, 'id'):
-                result[key] = value.id
-            elif isinstance(value, list):
-                result[key] = [item.id if hasattr(item, 'id') else item for item in value]
-            else:
-                result[key] = value
+                # Pour les attributs privés, on enlève l'underscore
+                clean_key = key.lstrip('_')
+                if isinstance(value, datetime):
+                    result[clean_key] = value.isoformat()
+                elif hasattr(value, 'id'):
+                    result[clean_key] = value.id
+                elif isinstance(value, list):
+                    result[clean_key] = [item.id if hasattr(item, 'id') else item for item in value]
+                else:
+                    result[clean_key] = value
+            elif not key.startswith('_'):
+                if isinstance(value, datetime):
+                    result[key] = value.isoformat()
+                elif hasattr(value, 'id'):
+                    result[key] = value.id
+                elif isinstance(value, list):
+                    result[key] = [item.id if hasattr(item, 'id') else item for item in value]
+                else:
+                    result[key] = value
         return result
     
     def update(self, data):
