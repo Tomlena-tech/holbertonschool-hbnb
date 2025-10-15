@@ -1,4 +1,3 @@
-
 from .base_model import BaseModel
 import re
 
@@ -173,3 +172,4 @@ class User(BaseModel):
             'last_name': self.last_name,
             'email': self.email
         }
+        
