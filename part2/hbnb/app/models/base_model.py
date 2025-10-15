@@ -1,95 +1,82 @@
-#!/usr/bin/python3
-"""Base model for all entities"""
 import uuid
 from datetime import datetime
-from abc import ABC
 
 
-class BaseModel(ABC):
-    """Abstract base class with common attributes and methods"""
-    
+class BaseModel:
+    """
+    BaseModel is a base class providing common attributes and methods for all
+    data models.
+
+    It provides:
+    - Unique identification for each instance (`id`).
+    - Automatic tracking of creation and modification timestamps.
+    - Utility methods for updating attributes and validating values.
+    """
     def __init__(self):
-        """Initialize base attributes"""
+        """
+        Initialize a new instance of BaseModel.
+
+        Attributes:
+            id (str): A unique UUID string identifying the instance.
+            created_at (datetime): The timestamp when the instance was created.
+            updated_at (datetime): The timestamp when the instance was last
+                modified.
+        """
         self.id = str(uuid.uuid4())
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
-    
+
     def save(self):
-        """Update the updated_at timestamp"""
+        """
+        Update the `updated_at` timestamp to the current datetime.
+
+        This method should be called whenever the object is modified to ensure
+        that modification times are tracked accurately.
+        """
         self.updated_at = datetime.now()
-    
-    def delete(self):
-        """Delete the entity"""
-        pass
-    
-    def is_max_length(self, field_name, value, max_length):
-        """
-        Helper method to validate maximum length.
-        
-        Args:
-            field_name (str): Name of the field being validated
-            value (str): The value to check
-            max_length (int): Maximum allowed length
-            
-        Raises:
-            ValueError: If value is empty or exceeds max_length
-        """
-        if not value or len(value) == 0:
-            raise ValueError(f"{field_name} is required")
-        if len(value) > max_length:
-            raise ValueError(f"{field_name} must not exceed {max_length} characters")
-    
-    def to_dict(self):
-        """Convert object to dictionary representation
-        
-        Returns:
-            dict: Dictionary with all attributes
-        """
-        result = {}
-        
-        # Add standard attributes
-        result['id'] = self.id
-        result['created_at'] = self.created_at.isoformat()
-        result['updated_at'] = self.updated_at.isoformat()
-        
-        # Add other attributes
-        for key, value in self.__dict__.items():
-            # Skip already added attributes
-            if key in ['id', 'created_at', 'updated_at']:
-                continue
-                
-            # Handle private attributes (starting with _)
-            if key.startswith('_'):
-                clean_key = key.lstrip('_')
-                if hasattr(value, 'id'):
-                    result[clean_key] = value.id
-                elif isinstance(value, list):
-                    result[clean_key] = [item.id if hasattr(item, 'id') else item for item in value]
-                else:
-                    result[clean_key] = value
-            # Handle public attributes
-            else:
-                if hasattr(value, 'id'):
-                    result[key] = value.id
-                elif isinstance(value, list):
-                    result[key] = [item.id if hasattr(item, 'id') else item for item in value]
-                else:
-                    result[key] = value
-                    
-        return result
-    
+
     def update(self, data):
-        """Update the attributes based on the provided dictionary
-        
+        """
+        Update the instance's attributes based on the provided dictionary.
+
         Args:
-            data: Dictionary with attributes to update
-            
-        Returns:
-            self: The updated object
+            data (dict): A dictionary containing attribute names and their new
+                values (key-value pairs).
         """
         for key, value in data.items():
-            if hasattr(self, key) and not key.startswith('_'):
+            if hasattr(self, key):
                 setattr(self, key, value)
-        self.save()
-        return self
-    
+        self.save()  # Update the updated_at timestamp
+
+    def is_max_length(self, name, value, max_length):
+        """
+        Validate that the given string value does not exceed a maximum length.
+
+        Args:
+            name (str): The name of the attribute being validated
+            value (str): The string value to check.
+            max_length (int): The maximum allowed length.
+
+        Raises:
+            ValueError: If the value's length exceeds the maximum allowed
+                length.
+        """
+        if len(value) > max_length:
+            raise ValueError(f"{name} exceeds maximum length of {max_length}")
+
+    def is_in_range(self, name, value, min, max):
+        """
+        Validate that a numeric value falls within a specified exclusive range.
+
+        Args:
+            name (str): The name of the attribute being validated.
+            value (float): The numeric value to check.
+            min (float): The minimum allowed value (exclusive).
+            max (float): The maximum allowed value (exclusive).
+
+        Raises:
+            ValueError: If the value is not within the specified range.
+        """
+        if not (min < value < max):
+            raise ValueError(f"{name} must be between {min} and {max}")
+        
