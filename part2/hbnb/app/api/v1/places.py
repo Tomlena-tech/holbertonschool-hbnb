@@ -59,7 +59,10 @@ class PlaceResource(Resource):
     def get(self, place_id):
         """Get place details by ID"""
         # Placeholder for the logic to retrieve a place by ID, including associated owner and amenities
-        pass
+    def get(self):
+        """Retrieve a list of all places"""
+        places = facade.get_all_places()
+        return [p.to_dict(light=True) for p in places], 200
 
     @api.expect(place_model)
     @api.response(200, 'Place updated successfully')

@@ -9,6 +9,5 @@ def create_app():
 
     # Register the users namespace
     api.add_namespace(users_ns, path='/api/v1/users')
-    return app
     api.add_namespace(places_ns, path='/api/v1/places')
     return app

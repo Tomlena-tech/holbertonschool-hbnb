@@ -42,10 +42,10 @@ class HBnBFacade:
     # Placeholder for logic to retrieve a place by ID, including associated owner and amenities
         pass
 
-    def get_all_places(self):
-    # Placeholder for logic to retrieve all places
-        pass
-
+    def get_all_places(self) -> list[Place]:
+        """Retourne toutes les places (objets)."""
+        return self.place_repo.get_all()
+    
     def update_place(self, place_id, place_data):
     # Placeholder for logic to update a place
         pass

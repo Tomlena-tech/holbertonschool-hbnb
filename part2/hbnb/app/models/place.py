@@ -90,7 +90,14 @@ class Place(BaseModel):
 
     # ----------------  sérialisation  ----------------
     def to_dict(self, light=False):
-        base = {
+        if light:
+            return {
+                'id': self.id,
+                'title': self.title,
+                'latitude': self.latitude,
+                'longitude': self.longitude
+        }
+        return {
             'id': self.id,
             'title': self.title,
             'description': self.description,
@@ -99,9 +106,7 @@ class Place(BaseModel):
             'longitude': self.longitude,
             'owner_id': self.owner_id,
             'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
-        }
-        if not light:
-            base['amenities'] = self.amenities
-        return base
+            'updated_at': self.updated_at.isoformat(),
+            'amenities': self.amenities
+    }
     
