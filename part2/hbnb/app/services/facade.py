@@ -2,6 +2,7 @@ from app.persistence.repository import InMemoryRepository
 from app.models.user import User
 from datetime import datetime
 
+from app.models.place import Place
 class HBnBFacade:
     def __init__(self):
         self.user_repo = InMemoryRepository()
@@ -30,6 +31,9 @@ class HBnBFacade:
         user.updated_at = datetime.utcnow()
         return user
     
+    def __init__(self):
+        self.place_repo = InMemoryRepository() 
+    # ------ CRUD PLACE ------       
     def create_place(self, place_data):
     # Placeholder for logic to create a place, including validation for price, latitude, and longitude
         pass
@@ -45,3 +49,19 @@ class HBnBFacade:
     def update_place(self, place_id, place_data):
     # Placeholder for logic to update a place
         pass
+    
+    def create_place(self, place_data: dict) -> Place:
+    #Crée une place (validation auto via setters).
+        place = Place(
+        title=place_data["title"],
+        price=place_data["price"],
+        latitude=place_data["latitude"],
+        longitude=place_data["longitude"],
+        owner_id=place_data["owner_id"],
+        description=place_data.get("description", ""),
+        amenities=place_data.get("amenities", [])
+    )
+        self.place_repo.add(place)
+        return place
+    
+    
