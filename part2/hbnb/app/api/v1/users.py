@@ -94,3 +94,14 @@ class UserResource(Resource):
             'updated_at': user.updated_at.isoformat()
         }, 200
         
+def put(self, user_id):
+    user_data = api.payload
+    
+    
+    user = facade.update_user(user_id, user_data)
+    
+    if not user:
+        return {'error': 'User not found'}, 404
+    
+    return {...}, 200
+        
