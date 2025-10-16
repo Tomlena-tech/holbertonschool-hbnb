@@ -29,7 +29,7 @@ review_model = api.model('PlaceReview', {
     'rating': fields.Integer(description='Rating given in the review'),
     'user': fields.Nested(user_model, description='User who wrote the review')
 })
-place_model = api.model('Place'), {
+place_model = api.model('Place', {
     'id': fields.String(description='Place ID'),
     'title': fields.String(required=True, description='Title of the place'),
     'description': fields.String(description='Description of the place'),
@@ -39,7 +39,7 @@ place_model = api.model('Place'), {
     'owner': fields.Nested(user_model, description='Owner of the place'),
     'amenities': fields.List(fields.Nested(amenity_model), description='List of amenities'),
     'reviews': fields.List(fields.Nested(review_model), description='List of reviews')
-}
+})
 @api.route('/')
 class PlaceList(Resource):
     @api.expect(place_model, validate=True)

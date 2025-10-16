@@ -1,9 +1,9 @@
 #!/usr/bin/python3
-"""Facade complète – compatible TES modèles main"""
 from app.persistence.repository import InMemoryRepository
 from app.models.user import User
 from app.models.amenity import Amenity
-from models.place import Place   # <-- ajuste si ton import est différent
+from app.models.place import Place
+from app.models.review import Review
 
 
 class HBnBFacade:
@@ -13,21 +13,31 @@ class HBnBFacade:
         self.user_repo   = InMemoryRepository()
         self.amenity_repo= InMemoryRepository()
         self.place_repo  = InMemoryRepository()
+        self.review_repo = InMemoryRepository()
+
 
     # ----------  USERS  ----------
     def create_user(self, user_data):
         user = User(**user_data)
         self.user_repo.add(user)
         return user
+    
+# ------------------------------------------------------------
 
     def get_user(self, user_id):
         return self.user_repo.get(user_id)
+    
+# ------------------------------------------------------------
 
     def get_user_by_email(self, email):
         return self.user_repo.get_by_attribute('email', email)
 
+# ------------------------------------------------------------
+
     def get_all_users(self):
         return self.user_repo.get_all()
+    
+# ------------------------------------------------------------
 
     def update_user(self, user_id, user_data):
         user = self.user_repo.get(user_id)
@@ -39,19 +49,26 @@ class HBnBFacade:
         self.user_repo.update(user_id, user)
         return user
 
-    # ----------  AMENITIES  ----------
+# ----------  AMENITIES  -----------------------------------
+
     def create_amenity(self, amenity_data):
         if not amenity_data.get('name'):
             raise ValueError('Name is required')
         amenity = Amenity(name=amenity_data['name'])
         self.amenity_repo.add(amenity)
         return amenity
+    
+# ------------------------------------------------------------
 
     def get_amenity(self, amenity_id):
         return self.amenity_repo.get(amenity_id)
+    
+# ------------------------------------------------------------
 
     def get_all_amenities(self):
         return self.amenity_repo.get_all()
+    
+# ------------------------------------------------------------
 
     def update_amenity(self, amenity_id, amenity_data):
         amenity = self.amenity_repo.get(amenity_id)
@@ -62,7 +79,7 @@ class HBnBFacade:
         self.amenity_repo.update(amenity_id, amenity)
         return amenity
 
-    # ----------  PLACES  ----------
+# ----------  PLACES  ---------------------------------------
     def create_place(self, place_data):
         if not place_data.get('title'):
             raise ValueError('Title is required')
@@ -103,12 +120,18 @@ class HBnBFacade:
         )
         self.place_repo.add(place)
         return place
+    
+# ------------------------------------------------------------
 
     def get_place(self, place_id):
         return self.place_repo.get(place_id)
+    
+# ------------------------------------------------------------
 
     def get_all_places(self):
         return self.place_repo.get_all()
+    
+# ------------------------------------------------------------
 
     def update_place(self, place_id, place_data):
         place = self.place_repo.get(place_id)
@@ -150,4 +173,77 @@ class HBnBFacade:
             place.amenities = place_data['amenities']
         self.place_repo.update(place_id, place)
         return place
+    # ------------------------------------------------------------
     
+    def create_review(self, review_data):
+        if not review_data.get('text'):
+            raise ValueError('Text is required')
+        if 'rating' not in review_data:
+            raise ValueError('Rating is required')
+        try:
+            rating = int(review_data['rating'])
+            if not (1 <= rating <= 5):
+                raise ValueError('Rating must be between 1 and 5')
+        except (TypeError, ValueError):
+            raise ValueError('Rating must be an integer between 1 and 5')
+        if not review_data.get('user_id'):
+            raise ValueError('User ID is required')
+        if not review_data.get('place_id'):
+            raise ValueError('Place ID is required')
+        review = Review(
+            text=review_data['text'],
+            rating=rating,
+            user_id=review_data['user_id'],
+            place_id=review_data['place_id']
+        )
+        self.review_repo.add(review)
+        return review
+    
+    # ------------------------------------------------------------
+    def get_review(self, review_id):
+        return self.review_repo.get(review_id)
+    
+    # ------------------------------------------------------------
+    def get_all_reviews(self):
+        return self.review_repo.get_all()
+    
+    # ------------------------------------------------------------
+    def update_review(self, review_id, review_data):
+        review = self.review_repo.get(review_id)
+        if not review:
+            return None
+         # Update text
+        if 'text' in review_data:
+            if not review_data['text']:
+                raise ValueError('Text cannot be empty')
+            review.text = review_data['text']
+        # Update rating
+        if 'rating' in review_data:
+            try:
+                rating = int(review_data['rating'])
+                if not (1 <= rating <= 5):
+                    raise ValueError('Rating must be between 1 and 5')
+                review.rating = rating
+            except (TypeError, ValueError):
+                raise ValueError('Rating must be an integer between 1 and 5')
+        if 'user_id' in review_data:
+            review.user_id = review_data['user_id']
+        if 'place_id' in review_data:
+            review.place_id = review_data['place_id']
+        self.review_repo.update(review_id, review)
+        return review
+    
+    # ------------------------------------------------------------
+    def get_reviews_by_place(self, place_id):
+        all_reviews = self.review_repo.get_all()
+        return [review for review in all_reviews if review.place_id == place_id]
+        
+        
+# ------------------------------------------------------------
+    def delete_review(self, review_id):
+        """Delete a review"""
+        review = self.review_repo.get(review_id)
+        if not review:
+            return False
+        self.review_repo.delete(review_id)
+        return True
