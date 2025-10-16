@@ -1,7 +1,9 @@
 from app.persistence.repository import InMemoryRepository
 from app.models.user import User
-from part2.hbnb.app.models.amenity import Amenity
+from app.models.amenity import Amenity 
+
 class HBnBFacade:
+    """Facade for HBnB application operations."""
     def __init__(self):
         self.user_repo = InMemoryRepository()
         self.amenity_repo = InMemoryRepository()
@@ -27,7 +29,7 @@ class HBnBFacade:
 
     def get_amenity(self, amenity_id):
     # Placeholder for logic to retrieve an amenity by ID
-        return self.amenity_repo.get(amenity_id)
+        return self.amenity_repo.get_all(amenity_id)
 
     def get_all_amenities(self):
     # Placeholder for logic to retrieve all amenities
