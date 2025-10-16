@@ -110,4 +110,3 @@ class PlaceResource(Resource):
             return updated_place.to_dict(), 200
         except (TypeError, ValueError) as e:
             return {'error': str(e)}, 400
-        
