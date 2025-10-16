@@ -150,4 +150,5 @@ class HBnBFacade:
             place.amenities = place_data['amenities']
         self.place_repo.update(place_id, place)
         return place
-    
+    # Singleton utilisé par les namespaces
+facade = HBnBFacade()
