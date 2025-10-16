@@ -14,17 +14,7 @@ review_model = api.model('Review', {
 
 @api.route('/')
 class ReviewList(Resource):
-    def post(self):
-        reviews = facade.get_all_reviews()
-        return [{
-            'id': review.id,
-            'text': review.text,
-            'rating': review.rating,
-            'place_id': review.place_id,
-            'user_id': review.user_id,
-            'created_at': review.created_at.isoformat(),
-            'updated_at': review.updated_at.isoformat()
-        } for review in reviews], 200
+    
     
     @api.response(200, 'List of reviews retrieved')
     @api.expect(review_model, validate=True)
