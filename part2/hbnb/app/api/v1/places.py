@@ -3,28 +3,17 @@ from app.services import facade
 
 api = Namespace('places', description='Place operations')
 
-amenity_model = api.model('PlaceAmenity', {
-    'id': fields.String(description='Amenity ID'),
-    'name': fields.String(description='Name of the amenity')
+# Define the place model for input validation and documentation
+place_model = api.model('Place', {
+    'title': fields.String(required=True, description='Title of the place'),
+    'description': fields.String(required=False, description='Description of the place'),
+    'price': fields.Float(required=True, description='Price per night'),
+    'latitude': fields.Float(required=True, description='Latitude coordinate'),
+    'longitude': fields.Float(required=True, description='Longitude coordinate'),
+    'owner_id': fields.String(required=True, description='ID of the owner'),
+    'amenities': fields.List(fields.String, required=False, description='List of amenity IDs')
 })
 
-user_model = api.model('PlaceUser', {
-    'id': fields.String(description='User ID'),
-    'first_name': fields.String(description='First name of the owner'),
-    'last_name': fields.String(description='Last name of the owner'),
-    'email': fields.String(description='Email of the owner')
-})
-place_model = api.model('Place', {
-    'title': fields.String(required=True),
-    'owner_id': fields.String(required=True),      
-    'amenities': fields.List(fields.String),
-})
-review_model = api.model('PlaceReview', {
-    'id': fields.String(description='Review ID'),
-    'text': fields.String(description='Text of the review'),
-    'rating': fields.Integer(description='Rating given in the review'),
-    'user': fields.Nested(user_model, description='User who wrote the review')
-})
 
 @api.route('/')
 class PlaceList(Resource):
@@ -36,7 +25,7 @@ class PlaceList(Resource):
         place_data = api.payload
         try:    
             new_place = facade.create_place(place_data)
-            return{
+            return {
                 'id': new_place.id,
                 'title': new_place.title,
                 'description': new_place.description,
@@ -47,9 +36,9 @@ class PlaceList(Resource):
                 'amenities': new_place.amenities,
                 'created_at': new_place.created_at.isoformat(),
                 'updated_at': new_place.updated_at.isoformat()   
-           }, 201
+            }, 201
         except ValueError as e:
-            return {'message': str(e)}, 400
+            return {'error': str(e)}, 400
         
     @api.response(200, 'List of places retrieved successfully')
     def get(self):
@@ -67,7 +56,7 @@ class PlaceList(Resource):
             'created_at': place.created_at.isoformat(),
             'updated_at': place.updated_at.isoformat()
         } for place in places], 200
-#--------------------------------------------------------
+
 
 @api.route('/<place_id>')
 class PlaceResource(Resource):
@@ -118,4 +107,3 @@ class PlaceResource(Resource):
             }, 200
         except ValueError as e:
             return {'error': str(e)}, 400
-
