@@ -32,8 +32,8 @@ class ReviewList(Resource):
                 'id': new_review.id,
                 'text': new_review.text,
                 'rating': new_review.rating,
-                'place_id': new_review.place_id,
-                'user_id': new_review.user_id,
+                'place_id': new_review.place.id,
+                'user_id': new_review.user.id,
                 'created_at': new_review.created_at.isoformat(),
                 'updated_at': new_review.updated_at.isoformat()
             }, 201
@@ -74,8 +74,8 @@ class ReviewResource(Resource):
             'id': review.id,
             'text': review.text,
             'rating': review.rating,
-            'place_id': review.place_id,
-            'user_id': review.user_id,
+            'place_id': review.place.id,
+            'user_id': review.user.id,
             'created_at': review.created_at.isoformat(),
             'updated_at': review.updated_at.isoformat()
         }, 200
@@ -125,7 +125,6 @@ class ReviewResource(Resource):
 class PlaceReviewList(Resource):
     
     #Class to handle reviews for a specific place
-    
     @api.response(200, 'List of reviews for the place')
     @api.response(404, 'Place not found')
     def get(self, place_id):

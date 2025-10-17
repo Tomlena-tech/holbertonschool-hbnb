@@ -37,7 +37,7 @@ class PlaceList(Resource):
                 'price': new_place.price,
                 'latitude': new_place.latitude,
                 'longitude': new_place.longitude,
-                'owner_id': new_place.owner_id,
+                'owner_id': new_place.owner.id,
                 'amenities': new_place.amenities,
                 'created_at': new_place.created_at.isoformat(),
                 'updated_at': new_place.updated_at.isoformat()   
