@@ -90,7 +90,7 @@ class Place(BaseModel):
         """
         Validate and set the description.
         """
-        if not isinstance(value, str):
+        if value is not None and not isinstance(value, str):
             raise TypeError("Description must be a string")
         self.__description = value
 
