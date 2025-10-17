@@ -1,27 +1,36 @@
-#!/usr/bin/python3
 from flask_restx import Namespace, Resource, fields
-from app.services import facade
+from app.services.facade import HBnBFacade
 
 api = Namespace('reviews', description='Review operations')
-# Initialize facade and namespace
+facade = HBnBFacade()
 
-
-# validation and documentation model for Review
+# Review model for input validation
 review_model = api.model('Review', {
-    'text':     fields.String(required=True, description='Review text'),
-    'rating':   fields.Integer(required=True, description='Rating 1-5'),
-    'place_id': fields.String(required=True, description='Place ID'),
-    'user_id':  fields.String(required=True, description='User ID')
+    'text': fields.String(required=True, description='Review text'),
+    'rating': fields.Integer(required=True, description='Rating from 1-5'),
+    'user_id': fields.String(required=True, description='ID of the user'),
+    'place_id': fields.String(required=True, description='ID of the place')
 })
 
-#--------------Define the Review Resource ------------------------------
 
 @api.route('/')
 class ReviewList(Resource):
-    
-    # creation of reviewlist who's create and get all reviews
-    @api.expect(review_model, validate=True)
-    @api.response(201, 'Review successfully created')
+    @api.response(200, 'List of reviews retrieved successfully')
+    def get(self):
+        """Retrieve all reviews"""
+        reviews = facade.get_all_reviews()
+        return [{
+            'id': review.id,
+            'text': review.text,
+            'rating': review.rating,
+            'place_id': review.place.id,  # ✅ CORRIGÉ
+            'user_id': review.user.id,    # ✅ CORRIGÉ
+            'created_at': review.created_at.isoformat(),
+            'updated_at': review.updated_at.isoformat()
+        } for review in reviews], 200
+
+    @api.expect(review_model)
+    @api.response(201, 'Review created successfully')
     @api.response(400, 'Invalid input data')
     def post(self):
         """Create a new review"""
@@ -32,41 +41,21 @@ class ReviewList(Resource):
                 'id': new_review.id,
                 'text': new_review.text,
                 'rating': new_review.rating,
-                'place_id': new_review.place.id,
-                'user_id': new_review.user.id,
+                'place_id': new_review.place.id,  # ✅ CORRIGÉ
+                'user_id': new_review.user.id,    # ✅ CORRIGÉ
                 'created_at': new_review.created_at.isoformat(),
                 'updated_at': new_review.updated_at.isoformat()
             }, 201
         except ValueError as e:
             return {'error': str(e)}, 400
-        
-# ------------------------------------------------------------
-
-    @api.response(200, 'List of reviews retrieved successfully')
-    def get(self):
-        """Retrieve all reviews"""
-        reviews = facade.get_all_reviews()
-        return [{
-            'id': review.id,
-            'text': review.text,
-            'rating': review.rating,
-            'place_id': review.place_id,
-            'user_id': review.user_id,
-            'created_at': review.created_at.isoformat(),
-            'updated_at': review.updated_at.isoformat()
-        } for review in reviews], 200
-        
-# ------------------------------------------------------------
 
 
 @api.route('/<review_id>')
 class ReviewResource(Resource):
-    # Retrieve, update, delete a specific review by ID
-    
-    @api.response(200, 'Review retrieved successfully')
+    @api.response(200, 'Review details retrieved successfully')
     @api.response(404, 'Review not found')
     def get(self, review_id):
-        """Retrieve a specific review by ID"""
+        """Get a review by ID"""
         review = facade.get_review(review_id)
         if not review:
             return {'error': 'Review not found'}, 404
@@ -74,21 +63,18 @@ class ReviewResource(Resource):
             'id': review.id,
             'text': review.text,
             'rating': review.rating,
-            'place_id': review.place.id,
-            'user_id': review.user.id,
+            'place_id': review.place.id,  # ✅ CORRIGÉ
+            'user_id': review.user.id,    # ✅ CORRIGÉ
             'created_at': review.created_at.isoformat(),
             'updated_at': review.updated_at.isoformat()
         }, 200
-        
-    # ------------------------------------------------------------
 
-    
-    @api.expect(review_model, validate=True)
+    @api.expect(review_model)
     @api.response(200, 'Review updated successfully')
-    @api.response(400, 'Invalid input data')
     @api.response(404, 'Review not found')
+    @api.response(400, 'Invalid input data')
     def put(self, review_id):
-        """Update a specific review by ID"""
+        """Update a review"""
         review_data = api.payload
         try:
             updated_review = facade.update_review(review_id, review_data)
@@ -98,48 +84,20 @@ class ReviewResource(Resource):
                 'id': updated_review.id,
                 'text': updated_review.text,
                 'rating': updated_review.rating,
-                'place_id': updated_review.place_id,
-                'user_id': updated_review.user_id,
+                'place_id': updated_review.place.id,  # ✅ CORRIGÉ
+                'user_id': updated_review.user.id,    # ✅ CORRIGÉ
                 'created_at': updated_review.created_at.isoformat(),
                 'updated_at': updated_review.updated_at.isoformat()
             }, 200
         except ValueError as e:
             return {'error': str(e)}, 400
-        
- # ------------------------------------------------------------
-
 
     @api.response(200, 'Review deleted successfully')
     @api.response(404, 'Review not found')
     def delete(self, review_id):
-        """Delete a specific review by ID"""
+        """Delete a review"""
         success = facade.delete_review(review_id)
         if not success:
             return {'error': 'Review not found'}, 404
         return {'message': 'Review deleted successfully'}, 200
     
-# ------------------------------------------------------------
-
-
-@api.route('/places/<place_id>/reviews')
-class PlaceReviewList(Resource):
-    
-    #Class to handle reviews for a specific place
-    @api.response(200, 'List of reviews for the place')
-    @api.response(404, 'Place not found')
-    def get(self, place_id):
-        """Get all reviews for a specific place"""
-        place = facade.get_place(place_id)
-        if not place:
-            return {'error': 'Place not found'}, 404
-    
-        reviews = facade.get_reviews_by_place(place_id)
-        return [{
-            'id': review.id,
-            'text': review.text,
-            'rating': review.rating,
-            'user_id': review.user_id,
-            'created_at': review.created_at.isoformat(),
-            'updated_at': review.updated_at.isoformat()
-        } for review in reviews], 200
-        
