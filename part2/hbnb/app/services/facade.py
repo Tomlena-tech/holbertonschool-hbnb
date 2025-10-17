@@ -1,283 +1,276 @@
-#!/usr/bin/python3
 from app.persistence.repository import InMemoryRepository
 from app.models.user import User
-from app.models.amenity import Amenity
 from app.models.place import Place
 from app.models.review import Review
+from app.models.amenity import Amenity
+
+# ------------------------------------------------------------
+# Classe de façade principale : interface entre API et logique
+# ------------------------------------------------------------
 
 
 class HBnBFacade:
-    """Facade for HBnB application operations."""
+
+    """
+    Classe de façade qui centralise l'accès aux dépôts mémoire
+    pour les entités principales (User, Place, Review, Amenity).
+    """
 
     def __init__(self):
-        self.user_repo   = InMemoryRepository()
-        self.amenity_repo= InMemoryRepository()
-        self.place_repo  = InMemoryRepository()
+
+        """
+        Initialise les différents dépôts en mémoire.
+        """
+
+        self.user_repo = InMemoryRepository()
+        self.place_repo = InMemoryRepository()
         self.review_repo = InMemoryRepository()
+        self.amenity_repo = InMemoryRepository()
 
+# ----------------------------------------
+# ---------- USER METHODS ----------------
+# ----------------------------------------
 
-    # ----------  USERS  ----------
     def create_user(self, user_data):
+
+        """
+        Crée un nouvel utilisateur et l'ajoute au dépôt.
+        """
+
         user = User(**user_data)
         self.user_repo.add(user)
         return user
-    
+
 # ------------------------------------------------------------
 
     def get_user(self, user_id):
+
+        """
+        Récupère un utilisateur par son ID.
+        """
+
         return self.user_repo.get(user_id)
-    
+
 # ------------------------------------------------------------
 
     def get_user_by_email(self, email):
+
+        """
+        Récupère un utilisateur à partir de son email.
+        """
+
         return self.user_repo.get_by_attribute('email', email)
 
 # ------------------------------------------------------------
 
     def get_all_users(self):
+
+        """
+        Retourne la liste de tous les utilisateurs.
+        """
+
         return self.user_repo.get_all()
-    
+
 # ------------------------------------------------------------
 
     def update_user(self, user_id, user_data):
+
+        """
+        Met à jour les informations d'un utilisateur.
+        """
+
         user = self.user_repo.get(user_id)
         if not user:
             return None
-        for k in ('first_name', 'last_name', 'email'):
-            if k in user_data:
-                setattr(user, k, user_data[k])
-        self.user_repo.update(user_id, user)
+
+        for key, value in user_data.items():
+            setattr(user, key, value)
+
+        self.user_repo.update(user)
         return user
 
-# ----------  AMENITIES  -----------------------------------
+# -------------------------------------------
+# ---------- AMENITY METHODS ----------------
+# -------------------------------------------
 
     def create_amenity(self, amenity_data):
-        if not amenity_data.get('name'):
-            raise ValueError('Name is required')
-        amenity = Amenity(name=amenity_data['name'])
+
+        """
+        Crée une commodité et l'ajoute au dépôt.
+        """
+
+        amenity = Amenity(**amenity_data)
         self.amenity_repo.add(amenity)
         return amenity
-    
+
 # ------------------------------------------------------------
 
     def get_amenity(self, amenity_id):
+
+        """
+        Récupère une commodité à partir de son ID.
+        """
+
         return self.amenity_repo.get(amenity_id)
-    
+
 # ------------------------------------------------------------
 
     def get_all_amenities(self):
+
+        """
+        Retourne la liste de toutes les commodités.
+        """
+
         return self.amenity_repo.get_all()
-    
+
 # ------------------------------------------------------------
 
     def update_amenity(self, amenity_id, amenity_data):
+
+        """
+        Met à jour les informations d'une commodité.
+        """
+
         amenity = self.amenity_repo.get(amenity_id)
         if not amenity:
             return None
-        if 'name' in amenity_data:
-            amenity.name = amenity_data['name']
-        self.amenity_repo.update(amenity_id, amenity)
+
+        for key, value in amenity_data.items():
+            setattr(amenity, key, value)
+
+        self.amenity_repo.update(amenity)
         return amenity
 
-# ----------  PLACES  ---------------------------------------
-  # app/services/facade.py
+# -----------------------------------------
+# ---------- PLACE METHODS ----------------
+# -----------------------------------------
 
     def create_place(self, place_data):
-        """Create a new place"""
-        
-        
-        if not place_data.get('title'):
-            raise ValueError('Title is required')
-        if len(place_data['title']) > 100:
-            raise ValueError('Title exceeds maximum length of 100')
-        
-        try:
-            price = float(place_data.get('price', 0))
-            if price < 0:
-                raise ValueError('Price must be a positive number')
-        except (TypeError, ValueError):
-            raise ValueError('Price must be a positive number')
-        
-        try:
-            latitude = float(place_data.get('latitude', 0))
-            if not (-90 < latitude < 90):
-                raise ValueError('Latitude must be between -90 and 90')
-        except (TypeError, ValueError):
-            raise ValueError('Latitude must be a number between -90 and 90')
-        
-        
-        try:
-            longitude = float(place_data.get('longitude', 0))
-            if not (-180 < longitude < 180):
-                raise ValueError('Longitude must be between -180 and 180')
-        except (TypeError, ValueError):
-            raise ValueError('Longitude must be a number between -180 and 180')
-        
-        
-        owner_id = place_data.get('owner_id')
-        if not owner_id:
-            raise ValueError('Owner ID is required')
-        
-        owner = self.user_repo.get(owner_id)  
-        if not owner:
-            raise ValueError('Owner not found')
-        
 
-        place = Place(
-            title=place_data['title'],
-            price=price,
-            latitude=latitude,
-            longitude=longitude,
-            owner=owner,  
-            description=place_data.get('description')  
-        )
-        
+        """
+        Crée un nouveau lieu avec ses attributs de base.
+        """
+
+        place = Place(**place_data)
         self.place_repo.add(place)
         return place
-        
-    # ------------------------------------------------------------
+
+# ------------------------------------------------------------
 
     def get_place(self, place_id):
-            return self.place_repo.get(place_id)
-        
-    # ------------------------------------------------------------
+
+        """
+        Récupère un lieu par son ID.
+        """
+
+        return self.place_repo.get(place_id)
+
+# ------------------------------------------------------------
 
     def get_all_places(self):
-            return self.place_repo.get_all()
-    
+
+        """
+        Retourne la liste de tous les lieux.
+        """
+
+        return self.place_repo.get_all()
+
 # ------------------------------------------------------------
 
     def update_place(self, place_id, place_data):
+
+        """
+        Met à jour les informations d'un lieu existant.
+        """
+
         place = self.place_repo.get(place_id)
         if not place:
             return None
-        if 'title' in place_data:
-            if not place_data['title']:
-                raise ValueError('Title cannot be empty')
-            place.title = place_data['title']
-        if 'description' in place_data:
-            place.description = place_data['description']
-        if 'price' in place_data:
-            try:
-                price = float(place_data['price'])
-                if price <= 0:
-                    raise ValueError('Price must be positive')
-                place.price = price
-            except (TypeError, ValueError):
-                raise ValueError('Price must be a positive number')
-        if 'latitude' in place_data:
-            try:
-                latitude = float(place_data['latitude'])
-                if not (-90.0 < latitude < 90.0):
-                    raise ValueError('Latitude must be between -90 and 90')
-                place.latitude = latitude
-            except (TypeError, ValueError):
-                raise ValueError('Latitude must be a number between -90 and 90')
-        if 'longitude' in place_data:
-            try:
-                longitude = float(place_data['longitude'])
-                if not (-180.0 < longitude < 180.0):
-                    raise ValueError('Longitude must be between -180 and 180')
-                place.longitude = longitude
-            except (TypeError, ValueError):
-                raise ValueError('Longitude must be a number between -180 and 180')
-        if 'owner_id' in place_data:
-            place.owner_id = place_data['owner_id']
-        if 'amenities' in place_data:
-            place.amenities = place_data['amenities']
-        self.place_repo.update(place_id, place)
+
+        for key, value in place_data.items():
+            setattr(place, key, value)
+
+        self.place_repo.update(place)
         return place
-    # ------------------------------------------------------------
-    
-    # app/services/facade.py
+
+# ------------------------------------------
+# ---------- REVIEW METHODS ----------------
+# ------------------------------------------
 
     def create_review(self, review_data):
-        """Create a new review"""
-        
-        # Validations...
-        if not review_data.get('text'):
-            raise ValueError('Text is required')
-        
-        try:
-            rating = int(review_data.get('rating', 0))
-            if not (1 <= rating <= 5):
-                raise ValueError('Rating must be between 1 and 5')
-        except (TypeError, ValueError):
-            raise ValueError('Rating must be an integer between 1 and 5')
-        
-        
-        user_id = review_data.get('user_id')
-        place_id = review_data.get('place_id')
-        
-        if not user_id:
-            raise ValueError('User ID is required')
-        if not place_id:
-            raise ValueError('Place ID is required')
-        
-        user = self.user_repo.get(user_id)
-        place = self.place_repo.get(place_id)
-        
-        if not user:
-            raise ValueError('User not found')
-        if not place:
-            raise ValueError('Place not found')
-        
-        
-        review = Review(
-            text=review_data['text'],
-            rating=rating,
-            place=place,  
-            user=user     
-        )
-        
+
+        """
+        Crée un nouvel avis et l'ajoute au dépôt.
+        """
+
+        review = Review(**review_data)
         self.review_repo.add(review)
         return review
-    
-    # ------------------------------------------------------------
+
+# ------------------------------------------------------------
+
     def get_review(self, review_id):
+
+        """
+        Récupère un avis à partir de son ID.
+        """
+
         return self.review_repo.get(review_id)
-    
-    # ------------------------------------------------------------
+
+# ------------------------------------------------------------
+
     def get_all_reviews(self):
+
+        """
+        Retourne la liste de tous les avis.
+        """
+
         return self.review_repo.get_all()
-    
-    # ------------------------------------------------------------
+
+# ------------------------------------------------------------
+
+    def get_reviews_by_place(self, place_id):
+
+        """
+        Récupère tous les avis associés à un lieu donné.
+        """
+
+        all_reviews = self.review_repo.get_all()
+        filtered_reviews = []
+        for r in all_reviews:
+            if r.place_id == place_id:
+                filtered_reviews.append(r)
+
+        return filtered_reviews
+
+# ------------------------------------------------------------
+
     def update_review(self, review_id, review_data):
+
+        """
+        Met à jour un avis existant.
+        """
+
         review = self.review_repo.get(review_id)
         if not review:
             return None
-         # Update text
-        if 'text' in review_data:
-            if not review_data['text']:
-                raise ValueError('Text cannot be empty')
-            review.text = review_data['text']
-        # Update rating
-        if 'rating' in review_data:
-            try:
-                rating = int(review_data['rating'])
-                if not (1 <= rating <= 5):
-                    raise ValueError('Rating must be between 1 and 5')
-                review.rating = rating
-            except (TypeError, ValueError):
-                raise ValueError('Rating must be an integer between 1 and 5')
-        if 'user_id' in review_data:
-            review.user_id = review_data['user_id']
-        if 'place_id' in review_data:
-            review.place_id = review_data['place_id']
-        self.review_repo.update(review_id, review)
+        for key, value in review_data.items():
+            setattr(review, key, value)
+
+        self.review_repo.update(review)
         return review
-    
-    # ------------------------------------------------------------
-    def get_reviews_by_place(self, place_id):
-        all_reviews = self.review_repo.get_all()
-        return [review for review in all_reviews if review.place_id == place_id]
-        
-        
+
 # ------------------------------------------------------------
+
     def delete_review(self, review_id):
-        """Delete a review"""
+
+        """
+        Supprime un avis du dépôt.
+        """
+
         review = self.review_repo.get(review_id)
         if not review:
-            return False
+            return None
         self.review_repo.delete(review_id)
-        return True
+        return review
+# ------------------------------------------------------------
