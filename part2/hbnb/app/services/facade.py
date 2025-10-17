@@ -82,71 +82,71 @@ class HBnBFacade:
 # ----------  PLACES  ---------------------------------------
   # app/services/facade.py
 
-def create_place(self, place_data):
-    """Create a new place"""
-    
-    # 1. VALIDATION DU TITRE
-    if not place_data.get('title'):
-        raise ValueError('Title is required')
-    if len(place_data['title']) > 100:
-        raise ValueError('Title exceeds maximum length of 100')
-    
-    # 2. VALIDATION DU PRIX
-    try:
-        price = float(place_data.get('price', 0))
-        if price < 0:
+    def create_place(self, place_data):
+        """Create a new place"""
+        
+        # 1. VALIDATION DU TITRE
+        if not place_data.get('title'):
+            raise ValueError('Title is required')
+        if len(place_data['title']) > 100:
+            raise ValueError('Title exceeds maximum length of 100')
+        
+        # 2. VALIDATION DU PRIX
+        try:
+            price = float(place_data.get('price', 0))
+            if price < 0:
+                raise ValueError('Price must be a positive number')
+        except (TypeError, ValueError):
             raise ValueError('Price must be a positive number')
-    except (TypeError, ValueError):
-        raise ValueError('Price must be a positive number')
-    
-    # 3. VALIDATION DE LA LATITUDE
-    try:
-        latitude = float(place_data.get('latitude', 0))
-        if not (-90 < latitude < 90):
-            raise ValueError('Latitude must be between -90 and 90')
-    except (TypeError, ValueError):
-        raise ValueError('Latitude must be a number between -90 and 90')
-    
-    # 4. VALIDATION DE LA LONGITUDE
-    try:
-        longitude = float(place_data.get('longitude', 0))
-        if not (-180 < longitude < 180):
-            raise ValueError('Longitude must be between -180 and 180')
-    except (TypeError, ValueError):
-        raise ValueError('Longitude must be a number between -180 and 180')
-    
-    # 5. ✅ RÉCUPÉRATION DE L'OWNER (OBJET USER)
-    owner_id = place_data.get('owner_id')
-    if not owner_id:
-        raise ValueError('Owner ID is required')
-    
-    owner = self.user_repo.get(owner_id)  # ← Récupère l'objet User
-    if not owner:
-        raise ValueError('Owner not found')
-    
-    # 6. ✅ CRÉATION DU PLACE AVEC L'OBJET OWNER
-    place = Place(
-        title=place_data['title'],
-        price=price,
-        latitude=latitude,
-        longitude=longitude,
-        owner=owner,  # ← OBJET User, pas string ID
-        description=place_data.get('description')  # ← Optionnel, peut être None
-    )
-    
-    # 7. SAUVEGARDE
-    self.place_repo.add(place)
-    return place
-    
-# ------------------------------------------------------------
+        
+        # 3. VALIDATION DE LA LATITUDE
+        try:
+            latitude = float(place_data.get('latitude', 0))
+            if not (-90 < latitude < 90):
+                raise ValueError('Latitude must be between -90 and 90')
+        except (TypeError, ValueError):
+            raise ValueError('Latitude must be a number between -90 and 90')
+        
+        # 4. VALIDATION DE LA LONGITUDE
+        try:
+            longitude = float(place_data.get('longitude', 0))
+            if not (-180 < longitude < 180):
+                raise ValueError('Longitude must be between -180 and 180')
+        except (TypeError, ValueError):
+            raise ValueError('Longitude must be a number between -180 and 180')
+        
+        # 5. ✅ RÉCUPÉRATION DE L'OWNER (OBJET USER)
+        owner_id = place_data.get('owner_id')
+        if not owner_id:
+            raise ValueError('Owner ID is required')
+        
+        owner = self.user_repo.get(owner_id)  # ← Récupère l'objet User
+        if not owner:
+            raise ValueError('Owner not found')
+        
+        # 6. ✅ CRÉATION DU PLACE AVEC L'OBJET OWNER
+        place = Place(
+            title=place_data['title'],
+            price=price,
+            latitude=latitude,
+            longitude=longitude,
+            owner=owner,  # ← OBJET User, pas string ID
+            description=place_data.get('description')  # ← Optionnel, peut être None
+        )
+        
+        # 7. SAUVEGARDE
+        self.place_repo.add(place)
+        return place
+        
+    # ------------------------------------------------------------
 
     def get_place(self, place_id):
-        return self.place_repo.get(place_id)
-    
-# ------------------------------------------------------------
+            return self.place_repo.get(place_id)
+        
+    # ------------------------------------------------------------
 
     def get_all_places(self):
-        return self.place_repo.get_all()
+            return self.place_repo.get_all()
     
 # ------------------------------------------------------------
 
@@ -192,27 +192,47 @@ def create_place(self, place_data):
         return place
     # ------------------------------------------------------------
     
+    # app/services/facade.py
+
     def create_review(self, review_data):
+        """Create a new review"""
+        
+        # Validations...
         if not review_data.get('text'):
             raise ValueError('Text is required')
-        if 'rating' not in review_data:
-            raise ValueError('Rating is required')
+        
         try:
-            rating = int(review_data['rating'])
+            rating = int(review_data.get('rating', 0))
             if not (1 <= rating <= 5):
                 raise ValueError('Rating must be between 1 and 5')
         except (TypeError, ValueError):
             raise ValueError('Rating must be an integer between 1 and 5')
-        if not review_data.get('user_id'):
+        
+        # ✅ RÉCUPÈRE LES OBJETS
+        user_id = review_data.get('user_id')
+        place_id = review_data.get('place_id')
+        
+        if not user_id:
             raise ValueError('User ID is required')
-        if not review_data.get('place_id'):
+        if not place_id:
             raise ValueError('Place ID is required')
+        
+        user = self.user_repo.get(user_id)
+        place = self.place_repo.get(place_id)
+        
+        if not user:
+            raise ValueError('User not found')
+        if not place:
+            raise ValueError('Place not found')
+        
+        # ✅ PASSE LES OBJETS
         review = Review(
             text=review_data['text'],
             rating=rating,
-            user_id=review_data['user_id'],
-            place_id=review_data['place_id']
+            place=place,  # ← Objet Place
+            user=user     # ← Objet User
         )
+        
         self.review_repo.add(review)
         return review
     
