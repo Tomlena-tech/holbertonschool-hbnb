@@ -80,46 +80,63 @@ class HBnBFacade:
         return amenity
 
 # ----------  PLACES  ---------------------------------------
-    def create_place(self, place_data):
-        if not place_data.get('title'):
-            raise ValueError('Title is required')
-        if 'price' not in place_data:
-            raise ValueError('Price is required')
-        try:
-            price = float(place_data['price'])
-            if price <= 0:
-                raise ValueError('Price must be positive')
-        except (TypeError, ValueError):
+  # app/services/facade.py
+
+def create_place(self, place_data):
+    """Create a new place"""
+    
+    # 1. VALIDATION DU TITRE
+    if not place_data.get('title'):
+        raise ValueError('Title is required')
+    if len(place_data['title']) > 100:
+        raise ValueError('Title exceeds maximum length of 100')
+    
+    # 2. VALIDATION DU PRIX
+    try:
+        price = float(place_data.get('price', 0))
+        if price < 0:
             raise ValueError('Price must be a positive number')
-        if 'latitude' not in place_data:
-            raise ValueError('Latitude is required')
-        try:
-            latitude = float(place_data['latitude'])
-            if not (-90.0 < latitude < 90.0):
-                raise ValueError('Latitude must be between -90 and 90')
-        except (TypeError, ValueError):
-            raise ValueError('Latitude must be a number between -90 and 90')
-        if 'longitude' not in place_data:
-            raise ValueError('Longitude is required')
-        try:
-            longitude = float(place_data['longitude'])
-            if not (-180.0 < longitude < 180.0):
-                raise ValueError('Longitude must be between -180 and 180')
-        except (TypeError, ValueError):
-            raise ValueError('Longitude must be a number between -180 and 180')
-        if not place_data.get('owner_id'):
-            raise ValueError('Owner ID is required')
-        place = Place(
-            title=place_data['title'],
-            description=place_data.get('description', ''),
-            price=price,
-            latitude=latitude,
-            longitude=longitude,
-            owner_id=place_data['owner_id'],
-            amenities=place_data.get('amenities', [])
-        )
-        self.place_repo.add(place)
-        return place
+    except (TypeError, ValueError):
+        raise ValueError('Price must be a positive number')
+    
+    # 3. VALIDATION DE LA LATITUDE
+    try:
+        latitude = float(place_data.get('latitude', 0))
+        if not (-90 < latitude < 90):
+            raise ValueError('Latitude must be between -90 and 90')
+    except (TypeError, ValueError):
+        raise ValueError('Latitude must be a number between -90 and 90')
+    
+    # 4. VALIDATION DE LA LONGITUDE
+    try:
+        longitude = float(place_data.get('longitude', 0))
+        if not (-180 < longitude < 180):
+            raise ValueError('Longitude must be between -180 and 180')
+    except (TypeError, ValueError):
+        raise ValueError('Longitude must be a number between -180 and 180')
+    
+    # 5. ✅ RÉCUPÉRATION DE L'OWNER (OBJET USER)
+    owner_id = place_data.get('owner_id')
+    if not owner_id:
+        raise ValueError('Owner ID is required')
+    
+    owner = self.user_repo.get(owner_id)  # ← Récupère l'objet User
+    if not owner:
+        raise ValueError('Owner not found')
+    
+    # 6. ✅ CRÉATION DU PLACE AVEC L'OBJET OWNER
+    place = Place(
+        title=place_data['title'],
+        price=price,
+        latitude=latitude,
+        longitude=longitude,
+        owner=owner,  # ← OBJET User, pas string ID
+        description=place_data.get('description')  # ← Optionnel, peut être None
+    )
+    
+    # 7. SAUVEGARDE
+    self.place_repo.add(place)
+    return place
     
 # ------------------------------------------------------------
 
