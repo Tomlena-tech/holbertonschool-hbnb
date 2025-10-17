@@ -3,7 +3,10 @@ from flask_restx import Namespace, Resource, fields
 from app.services import facade
 
 api = Namespace('reviews', description='Review operations')
+# Initialize facade and namespace
 
+
+# validation and documentation model for Review
 review_model = api.model('Review', {
     'text':     fields.String(required=True, description='Review text'),
     'rating':   fields.Integer(required=True, description='Rating 1-5'),
@@ -11,9 +14,12 @@ review_model = api.model('Review', {
     'user_id':  fields.String(required=True, description='User ID')
 })
 
+#--------------Define the Review Resource ------------------------------
 
 @api.route('/')
 class ReviewList(Resource):
+    
+    # creation of reviewlist who's create and get all reviews
     @api.expect(review_model, validate=True)
     @api.response(201, 'Review successfully created')
     @api.response(400, 'Invalid input data')
@@ -33,7 +39,9 @@ class ReviewList(Resource):
             }, 201
         except ValueError as e:
             return {'error': str(e)}, 400
-    
+        
+# ------------------------------------------------------------
+
     @api.response(200, 'List of reviews retrieved successfully')
     def get(self):
         """Retrieve all reviews"""
@@ -47,10 +55,14 @@ class ReviewList(Resource):
             'created_at': review.created_at.isoformat(),
             'updated_at': review.updated_at.isoformat()
         } for review in reviews], 200
+        
+# ------------------------------------------------------------
 
 
 @api.route('/<review_id>')
 class ReviewResource(Resource):
+    # Retrieve, update, delete a specific review by ID
+    
     @api.response(200, 'Review retrieved successfully')
     @api.response(404, 'Review not found')
     def get(self, review_id):
@@ -67,6 +79,9 @@ class ReviewResource(Resource):
             'created_at': review.created_at.isoformat(),
             'updated_at': review.updated_at.isoformat()
         }, 200
+        
+    # ------------------------------------------------------------
+
     
     @api.expect(review_model, validate=True)
     @api.response(200, 'Review updated successfully')
@@ -90,6 +105,9 @@ class ReviewResource(Resource):
             }, 200
         except ValueError as e:
             return {'error': str(e)}, 400
+        
+ # ------------------------------------------------------------
+
 
     @api.response(200, 'Review deleted successfully')
     @api.response(404, 'Review not found')
@@ -99,10 +117,15 @@ class ReviewResource(Resource):
         if not success:
             return {'error': 'Review not found'}, 404
         return {'message': 'Review deleted successfully'}, 200
+    
+# ------------------------------------------------------------
 
 
 @api.route('/places/<place_id>/reviews')
 class PlaceReviewList(Resource):
+    
+    #Class to handle reviews for a specific place
+    
     @api.response(200, 'List of reviews for the place')
     @api.response(404, 'Place not found')
     def get(self, place_id):

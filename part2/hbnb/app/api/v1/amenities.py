@@ -1,6 +1,17 @@
 from flask_restx import Namespace, Resource, fields
 from app.services import facade
 
+
+# File: amenities.py
+# Description:
+#   This file contains the API endpoints
+#   related to amenity management.
+#   It allows to:
+#     - Create a new amenity (POST)
+#     - List all amenities (GET)
+#     - View a specific amenity (GET /<amenity_id>)
+#     - Update an existing amenity (PUT)
+
 api = Namespace('amenities', description='Amenity operations')
 
 # Define the amenity model for input validation and documentation
@@ -47,6 +58,7 @@ class AmenityResource(Resource):
     @api.response(200, 'Amenity details retrieved successfully')
     @api.response(404, 'Amenity not found')
     def get(self, amenity_id):
+        #get amenity details by id
         """Get amenity details by ID"""
         amenity = facade.get_amenity(amenity_id)
         if not amenity:
@@ -57,6 +69,7 @@ class AmenityResource(Resource):
             'created_at': amenity.created_at.isoformat(),
             'updated_at': amenity.updated_at.isoformat()
         }, 200
+# ------------------------------------------------------------
 
     @api.expect(amenity_model, validate=True)
     @api.response(200, 'Amenity updated successfully')

@@ -1,5 +1,8 @@
 from flask_restx import Namespace, Resource, fields
 from app.services import facade
+from app.services.facade import HBnBFacade
+
+# Initialize facade and namespace
 
 api = Namespace('places', description='Place operations')
 
@@ -17,6 +20,8 @@ place_model = api.model('Place', {
 
 @api.route('/')
 class PlaceList(Resource):
+    # Create a new place and retrieve all places
+    
     @api.expect(place_model, validate=True)
     @api.response(201, 'Place successfully created')
     @api.response(400, 'Invalid input data')
@@ -40,6 +45,9 @@ class PlaceList(Resource):
         except ValueError as e:
             return {'error': str(e)}, 400
         
+ # ------------------------------------------------------------
+
+        
     @api.response(200, 'List of places retrieved successfully')
     def get(self):
         """Retrieve all places"""
@@ -56,6 +64,8 @@ class PlaceList(Resource):
             'created_at': place.created_at.isoformat(),
             'updated_at': place.updated_at.isoformat()
         } for place in places], 200
+
+# ------------------------------------------------------------
 
 
 @api.route('/<place_id>')
@@ -79,7 +89,9 @@ class PlaceResource(Resource):
             'created_at': place.created_at.isoformat(),
             'updated_at': place.updated_at.isoformat()
         }, 200
-    
+        
+    # ------------------------------------------------------------
+
     @api.expect(place_model, validate=True)
     @api.response(200, 'Place updated successfully')
     @api.response(404, 'Place not found')
