@@ -11,10 +11,11 @@ review_model = api.model('Review', {
     'user_id': fields.String(required=True, description='ID of the user'),
     'place_id': fields.String(required=True, description='ID of the place')
 })
-
+#------------------------------------------------------------
 
 @api.route('/')
 class ReviewList(Resource):
+    #create class ReviewList(Resource): who's methods are get and post
     @api.response(200, 'List of reviews retrieved successfully')
     def get(self):
         """Retrieve all reviews"""
@@ -23,8 +24,8 @@ class ReviewList(Resource):
             'id': review.id,
             'text': review.text,
             'rating': review.rating,
-            'place_id': review.place.id,  # ✅ CORRIGÉ
-            'user_id': review.user.id,    # ✅ CORRIGÉ
+            'place_id': review.place.id,  
+            'user_id': review.user.id,    
             'created_at': review.created_at.isoformat(),
             'updated_at': review.updated_at.isoformat()
         } for review in reviews], 200
@@ -41,8 +42,8 @@ class ReviewList(Resource):
                 'id': new_review.id,
                 'text': new_review.text,
                 'rating': new_review.rating,
-                'place_id': new_review.place.id,  # ✅ CORRIGÉ
-                'user_id': new_review.user.id,    # ✅ CORRIGÉ
+                'place_id': new_review.place.id,  
+                'user_id': new_review.user.id,    
                 'created_at': new_review.created_at.isoformat(),
                 'updated_at': new_review.updated_at.isoformat()
             }, 201
@@ -63,8 +64,8 @@ class ReviewResource(Resource):
             'id': review.id,
             'text': review.text,
             'rating': review.rating,
-            'place_id': review.place.id,  # ✅ CORRIGÉ
-            'user_id': review.user.id,    # ✅ CORRIGÉ
+            'place_id': review.place.id,  
+            'user_id': review.user.id,    
             'created_at': review.created_at.isoformat(),
             'updated_at': review.updated_at.isoformat()
         }, 200
@@ -84,8 +85,8 @@ class ReviewResource(Resource):
                 'id': updated_review.id,
                 'text': updated_review.text,
                 'rating': updated_review.rating,
-                'place_id': updated_review.place.id,  # ✅ CORRIGÉ
-                'user_id': updated_review.user.id,    # ✅ CORRIGÉ
+                'place_id': updated_review.place.id,  
+                'user_id': updated_review.user.id,    
                 'created_at': updated_review.created_at.isoformat(),
                 'updated_at': updated_review.updated_at.isoformat()
             }, 200

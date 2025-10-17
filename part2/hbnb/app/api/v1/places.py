@@ -97,7 +97,7 @@ class PlaceResource(Resource):
                 'price': updated_place.price,
                 'latitude': updated_place.latitude,
                 'longitude': updated_place.longitude,
-                'owner_id': updated_place.owner.id,  # ✅ CORRIGÉ
+                'owner_id': updated_place.owner.id,  
                 'amenities': updated_place.amenities,
                 'created_at': updated_place.created_at.isoformat(),
                 'updated_at': updated_place.updated_at.isoformat()

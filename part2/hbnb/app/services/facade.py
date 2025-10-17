@@ -205,7 +205,7 @@ class HBnBFacade:
         except (TypeError, ValueError):
             raise ValueError('Rating must be an integer between 1 and 5')
         
-        # ✅ RÉCUPÈRE LES OBJETS
+        
         user_id = review_data.get('user_id')
         place_id = review_data.get('place_id')
         
@@ -222,12 +222,12 @@ class HBnBFacade:
         if not place:
             raise ValueError('Place not found')
         
-        # ✅ PASSE LES OBJETS
+        
         review = Review(
             text=review_data['text'],
             rating=rating,
-            place=place,  # ← Objet Place
-            user=user     # ← Objet User
+            place=place,  
+            user=user     
         )
         
         self.review_repo.add(review)
