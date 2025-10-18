@@ -1,6 +1,7 @@
 from app.persistence.repository import InMemoryRepository
 from app.models.user import User
 from app.models.amenity import Amenity
+from app.models.place import Place
 
 
 class HBnBFacade:
@@ -28,11 +29,6 @@ class HBnBFacade:
         self.user_repo.update(user_id, user_data)
         return self.user_repo.get(user_id)
 
-    # Placeholder method for fetching a place by ID
-    def get_place(self, place_id):
-        # Logic will be implemented in later tasks
-        pass
-
     def create_amenity(self, amenity_data):
         amenity = Amenity(**amenity_data)
         self.amenity_repo.add(amenity)
@@ -47,3 +43,38 @@ class HBnBFacade:
     def update_amenity(self, amenity_id, amenity_data):
         self.amenity_repo.update(amenity_id, amenity_data)
         return self.amenity_repo.get(amenity_id)
+
+    def create_place(self, place_data):
+        owner_id = place_data.get('owner_id')
+        owner = self.user_repo.get(owner_id)
+        if not owner:
+            return None
+
+        amenity_ids = place_data.get('amenities', [])
+
+        place = Place(
+            title=place_data['title'],
+            description=place_data.get('description'),
+            price=place_data['price'],
+            latitude=place_data['latitude'],
+            longitude=place_data['longitude'],
+            owner=owner
+        )
+
+        for amenity_id in amenity_ids:
+            amenity = self.amenity_repo.get(amenity_id)
+            if amenity:
+                place.add_amenity(amenity)
+
+        self.place_repo.add(place)
+        return place
+
+    def get_place(self, place_id):
+        return self.place_repo.get(place_id)
+
+    def get_all_places(self):
+        return self.place_repo.get_all()
+
+    def update_place(self, place_id, place_data):
+        self.place_repo.update(place_id, place_data)
+        return self.place_repo.get(place_id)
