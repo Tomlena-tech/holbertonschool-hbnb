@@ -101,12 +101,12 @@ http://127.0.0.1:5000/api/v1/
 **User creation:**
 
 <div align="center">
-   <img src="/hbnb/images/swagger_user_creation.png" alt="Swagger User Creation" width="300px">
+   <img src="images/swagger_user_creation.png" alt="Swagger User Creation" width="300px">
 </div>
 
 **User duplicate email error:**
 <div align="center">
-   <img src="/hbnb/images/swagger_user_duplicate_email.png" alt="Swagger User Duplicate Email" width="300px">
+   <img src="images/swagger_user_duplicate_email.png" alt="Swagger User Duplicate Email" width="300px">
 </div>
 
 The documentation accurately reflects:
