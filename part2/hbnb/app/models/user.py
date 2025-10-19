@@ -107,6 +107,9 @@ class User(BaseModel):
             if self._email != value and value in User.emails:
                 raise ValueError("Email already exists")
             User.emails.discard(self._email)
+        else:
+            if value in User.emails:
+                raise ValueError("Email already exists")
         self._email = value
         User.emails.add(value)
 

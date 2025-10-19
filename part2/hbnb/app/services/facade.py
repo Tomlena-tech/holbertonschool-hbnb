@@ -1,12 +1,8 @@
 from app.persistence.repository import InMemoryRepository
 from app.models.user import User
+from app.models.amenity import Amenity
 from app.models.place import Place
 from app.models.review import Review
-from app.models.amenity import Amenity
-
-# ------------------------------------------------------------
-# Classe de façade principale : interface entre API et logique
-# ------------------------------------------------------------
 
 
 class HBnBFacade:
@@ -27,250 +23,114 @@ class HBnBFacade:
         self.review_repo = InMemoryRepository()
         self.amenity_repo = InMemoryRepository()
 
-# ----------------------------------------
-# ---------- USER METHODS ----------------
-# ----------------------------------------
-
     def create_user(self, user_data):
-
-        """
-        Crée un nouvel utilisateur et l'ajoute au dépôt.
-        """
-
         user = User(**user_data)
         self.user_repo.add(user)
         return user
 
-# ------------------------------------------------------------
-
     def get_user(self, user_id):
-
-        """
-        Récupère un utilisateur par son ID.
-        """
-
         return self.user_repo.get(user_id)
 
-# ------------------------------------------------------------
-
     def get_user_by_email(self, email):
-
-        """
-        Récupère un utilisateur à partir de son email.
-        """
-
         return self.user_repo.get_by_attribute('email', email)
 
-# ------------------------------------------------------------
-
     def get_all_users(self):
-
-        """
-        Retourne la liste de tous les utilisateurs.
-        """
-
         return self.user_repo.get_all()
 
-# ------------------------------------------------------------
-
     def update_user(self, user_id, user_data):
-
-        """
-        Met à jour les informations d'un utilisateur.
-        """
-
-        user = self.user_repo.get(user_id)
-        if not user:
-            return None
-
-        for key, value in user_data.items():
-            setattr(user, key, value)
-
-        self.user_repo.update(user)
-        return user
-
-# -------------------------------------------
-# ---------- AMENITY METHODS ----------------
-# -------------------------------------------
+        self.user_repo.update(user_id, user_data)
+        return self.user_repo.get(user_id)
 
     def create_amenity(self, amenity_data):
-
-        """
-        Crée une commodité et l'ajoute au dépôt.
-        """
-
         amenity = Amenity(**amenity_data)
         self.amenity_repo.add(amenity)
         return amenity
 
-# ------------------------------------------------------------
-
     def get_amenity(self, amenity_id):
-
-        """
-        Récupère une commodité à partir de son ID.
-        """
-
         return self.amenity_repo.get(amenity_id)
 
-# ------------------------------------------------------------
-
     def get_all_amenities(self):
-
-        """
-        Retourne la liste de toutes les commodités.
-        """
-
         return self.amenity_repo.get_all()
 
-# ------------------------------------------------------------
-
     def update_amenity(self, amenity_id, amenity_data):
-
-        """
-        Met à jour les informations d'une commodité.
-        """
-
-        amenity = self.amenity_repo.get(amenity_id)
-        if not amenity:
-            return None
-
-        for key, value in amenity_data.items():
-            setattr(amenity, key, value)
-
-        self.amenity_repo.update(amenity)
-        return amenity
-
-# -----------------------------------------
-# ---------- PLACE METHODS ----------------
-# -----------------------------------------
+        self.amenity_repo.update(amenity_id, amenity_data)
+        return self.amenity_repo.get(amenity_id)
 
     def create_place(self, place_data):
+        owner_id = place_data.get('owner_id')
+        owner = self.user_repo.get(owner_id)
+        if not owner:
+            return None
 
-        """
-        Crée un nouveau lieu avec ses attributs de base.
-        """
+        amenity_ids = place_data.get('amenities', [])
 
-        place = Place(**place_data)
+        place = Place(
+            title=place_data['title'],
+            description=place_data.get('description'),
+            price=place_data['price'],
+            latitude=place_data['latitude'],
+            longitude=place_data['longitude'],
+            owner=owner
+        )
+
+        for amenity_id in amenity_ids:
+            amenity = self.amenity_repo.get(amenity_id)
+            if amenity:
+                place.add_amenity(amenity)
+
         self.place_repo.add(place)
         return place
 
-# ------------------------------------------------------------
-
     def get_place(self, place_id):
-
-        """
-        Récupère un lieu par son ID.
-        """
-
         return self.place_repo.get(place_id)
 
-# ------------------------------------------------------------
-
     def get_all_places(self):
-
-        """
-        Retourne la liste de tous les lieux.
-        """
-
         return self.place_repo.get_all()
 
-# ------------------------------------------------------------
-
     def update_place(self, place_id, place_data):
+        self.place_repo.update(place_id, place_data)
+        return self.place_repo.get(place_id)
 
-        """
-        Met à jour les informations d'un lieu existant.
-        """
+    def create_review(self, review_data):
+        user_id = review_data.get('user_id')
+        place_id = review_data.get('place_id')
 
+        user = self.user_repo.get(user_id)
+        place = self.place_repo.get(place_id)
+
+        if not user or not place:
+            return None
+
+        review = Review(
+            text=review_data['text'],
+            rating=review_data['rating'],
+            place=place,
+            user=user
+        )
+
+        self.review_repo.add(review)
+        place.add_review(review)
+        return review
+
+    def get_review(self, review_id):
+        return self.review_repo.get(review_id)
+
+    def get_all_reviews(self):
+        return self.review_repo.get_all()
+
+    def get_reviews_by_place(self, place_id):
         place = self.place_repo.get(place_id)
         if not place:
             return None
-
-        for key, value in place_data.items():
-            setattr(place, key, value)
-
-        self.place_repo.update(place)
-        return place
-
-# ------------------------------------------
-# ---------- REVIEW METHODS ----------------
-# ------------------------------------------
-
-    def create_review(self, review_data):
-
-        """
-        Crée un nouvel avis et l'ajoute au dépôt.
-        """
-
-        review = Review(**review_data)
-        self.review_repo.add(review)
-        return review
-
-# ------------------------------------------------------------
-
-    def get_review(self, review_id):
-
-        """
-        Récupère un avis à partir de son ID.
-        """
-
-        return self.review_repo.get(review_id)
-
-# ------------------------------------------------------------
-
-    def get_all_reviews(self):
-
-        """
-        Retourne la liste de tous les avis.
-        """
-
-        return self.review_repo.get_all()
-
-# ------------------------------------------------------------
-
-    def get_reviews_by_place(self, place_id):
-
-        """
-        Récupère tous les avis associés à un lieu donné.
-        """
-
-        all_reviews = self.review_repo.get_all()
-        filtered_reviews = []
-        for r in all_reviews:
-            if r.place_id == place_id:
-                filtered_reviews.append(r)
-
-        return filtered_reviews
-
-# ------------------------------------------------------------
+        return place.reviews
 
     def update_review(self, review_id, review_data):
-
-        """
-        Met à jour un avis existant.
-        """
-
-        review = self.review_repo.get(review_id)
-        if not review:
-            return None
-        for key, value in review_data.items():
-            setattr(review, key, value)
-
-        self.review_repo.update(review)
-        return review
-
-# ------------------------------------------------------------
+        self.review_repo.update(review_id, review_data)
+        return self.review_repo.get(review_id)
 
     def delete_review(self, review_id):
-
-        """
-        Supprime un avis du dépôt.
-        """
-
         review = self.review_repo.get(review_id)
         if not review:
-            return None
+            return False
         self.review_repo.delete(review_id)
-        return review
-# ------------------------------------------------------------
+        return True

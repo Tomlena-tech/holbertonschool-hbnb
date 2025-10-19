@@ -32,7 +32,7 @@ class Review(BaseModel):
     def rating(self, value):
         if not isinstance(value, int):
             raise TypeError("Rating must be an integer")
-        super().is_in_range('Rating', value, 1, 6)
+        super().is_in_range('Rating', value, 0, 6)
         self.__rating = value
 
     @property
