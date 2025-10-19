@@ -6,7 +6,18 @@ from app.models.review import Review
 
 
 class HBnBFacade:
+
+    """
+    Classe de façade qui centralise l'accès aux dépôts mémoire
+    pour les entités principales (User, Place, Review, Amenity).
+    """
+
     def __init__(self):
+
+        """
+        Initialise les différents dépôts en mémoire.
+        """
+
         self.user_repo = InMemoryRepository()
         self.place_repo = InMemoryRepository()
         self.review_repo = InMemoryRepository()
