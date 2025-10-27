@@ -13,11 +13,23 @@ from app.api.v1.reviews import api as reviews_ns
 
 def create_app(config_class='config.DevelopmentConfig'):
     app = Flask(__name__)
+    app.config['SERVER_NAME'] = None
+    app.config['APPLICATION_ROOT'] = '/'
+    app.config['PREFERRED_URL_SCHEME'] = 'https'
     app.config.from_object(config_class)
     db.init_app(app)
     jwt.init_app(app)
     
-    api = Api(app, version='1.0', title='HBnB API', description='HBnB Application API', doc='/api/v1/')
+    from flask import jsonify
+    @app.route('/')
+    def index():
+        return jsonify({
+            "message": "HBnB API is running",
+            "swagger": "/api/v1/docs",
+            "version": "1.0"
+        }), 200
+    
+    api = Api(app, version='1.0', title='HBnB API', description='HBnB Application API', doc='/api/v1/docs')
 
     # Register the users namespace
     api.add_namespace(users_ns, path='/api/v1/users')
