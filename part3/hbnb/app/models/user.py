@@ -57,6 +57,10 @@ class User(BaseModel):
         """Verify if password matches the hash"""
         return bcrypt.check_password_hash(self.password_hash, password)
     
+    def verify_password(self, password: str) -> bool:
+        """Alias for check_password to match JWT tutorial naming."""
+        return self.check_password(password)
+    
     @property
     def password_hash(self):
         return self._password_hash
