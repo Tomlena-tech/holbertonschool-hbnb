@@ -1,6 +1,8 @@
 from .base_model import BaseModel
 import re
+from flask_bcrypt import Bcrypt
 
+bcrypt = Bcrypt()
 
 class User(BaseModel):
     """
@@ -24,7 +26,7 @@ class User(BaseModel):
     """
     emails = set()
 
-    def __init__(self, first_name, last_name, email, is_admin=False):
+    def __init__(self, first_name, last_name, email,password, is_admin=False):
         """
         Initialize a new User instance.
 
@@ -43,8 +45,27 @@ class User(BaseModel):
         self.last_name = last_name
         self.email = email
         self.is_admin = is_admin
+        self.set_password(password)
         self.places = []
         self.reviews = []
+        
+    def set_password(self, password):
+        """Hash and store the password"""
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    
+    def check_password(self, password):
+        """Verify if password matches the hash"""
+        return bcrypt.check_password_hash(self.password_hash, password)
+    
+    @property
+    def password_hash(self):
+        return self._password_hash
+    
+    @password_hash.setter
+    def password_hash(self, value):
+        """Store the hashed password"""
+        self._password_hash = value
+    
 
     @property
     def first_name(self):
