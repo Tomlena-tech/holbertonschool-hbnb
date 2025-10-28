@@ -1,0 +1,16 @@
+### Tester la page d'accueil
+GET http://localhost:5002/
+
+### Créer un utilisateur
+POST http://localhost:5002/api/v1/users/
+Content-Type: application/json
+
+{
+  "first_name": "Alice",
+  "last_name": "Martin",
+  "email": "alice@example.com",
+  "password": "SecurePass123!"
+}
+
+### Liste des utilisateurs
+GET http://localhost:5002/api/v1/users/
