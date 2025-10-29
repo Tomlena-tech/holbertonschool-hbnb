@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from app.services import facade
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
    
 api = Namespace('users', description='User operations')
@@ -30,7 +31,7 @@ class UserList(Resource):
         new_user = facade.create_user(user_data)
         return {'id': new_user.id, 'first_name': new_user.first_name, 'last_name': new_user.last_name, 'email': new_user.email}, 201
 
-
+    @jwt_required()
     @api.response(200, 'List of users retrieved successfully')
     def get(self):
         """Retrieve a list of all users"""
@@ -41,6 +42,7 @@ class UserList(Resource):
 class UserResource(Resource):
     @api.response(200, 'User details retrieved successfully')
     @api.response(404, 'User not found')
+    @jwt_required()
     def get(self, user_id):
         """Get user details by ID"""
         user = facade.get_user(user_id)
@@ -53,6 +55,7 @@ class UserResource(Resource):
     @api.response(200, 'User updated successfully')
     @api.response(404, 'User not found')
     @api.response(400, 'Invalid input data')
+    @jwt_required()
     def put(self, user_id):
         """Update a user's information"""
         user = facade.get_user(user_id)

@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from app.services import facade
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 api = Namespace('places', description='Place operations')
 
@@ -37,6 +38,7 @@ place_model = api.model('Place', {
 
 @api.route('/')
 class PlaceList(Resource):
+    @jwt_required()
     @api.expect(place_model, validate=True)
     @api.response(201, 'Place successfully created')
     @api.response(400, 'Invalid input data')
@@ -59,6 +61,7 @@ class PlaceList(Resource):
         }, 201
 
     @api.response(200, 'List of places retrieved successfully')
+    @jwt_required()
     def get(self):
         """Retrieve a list of all places"""
         places = facade.get_all_places()
@@ -74,6 +77,7 @@ class PlaceList(Resource):
 
 @api.route('/<place_id>')
 class PlaceResource(Resource):
+    @jwt_required()
     @api.response(200, 'Place details retrieved successfully')
     @api.response(404, 'Place not found')
     def get(self, place_id):
@@ -116,6 +120,7 @@ class PlaceResource(Resource):
     @api.response(200, 'Place updated successfully')
     @api.response(404, 'Place not found')
     @api.response(400, 'Invalid input data')
+    @jwt_required()
     def put(self, place_id):
         """Update a place's information"""
         place = facade.get_place(place_id)
