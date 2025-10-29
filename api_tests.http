@@ -2,7 +2,7 @@
 ### TESTS API HBNB - AVEC JWT
 ### ========================================
 
-@baseUrl = http://localhost:5002
+@baseUrl = http://localhost:5000
 @contentType = application/json
 
 ### ========================================
