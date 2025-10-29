@@ -1,9 +1,16 @@
-### Tester la page d'accueil
-GET http://localhost:5002/
+### ========================================
+### TESTS API HBNB - AVEC JWT
+### ========================================
 
-### Créer un utilisateur
-POST http://localhost:5002/api/v1/users/
-Content-Type: application/json
+@baseUrl = http://localhost:5002
+@contentType = application/json
+
+### ========================================
+### 1. INSCRIPTION (PUBLIC - pas de token)
+### ========================================
+
+POST {{baseUrl}}/api/v1/users/
+Content-Type: {{contentType}}
 
 {
   "first_name": "Alice",
@@ -12,5 +19,125 @@ Content-Type: application/json
   "password": "SecurePass123!"
 }
 
-### Liste des utilisateurs
-GET http://localhost:5002/api/v1/users/
+### ========================================
+### 2. CONNEXION (PUBLIC - pas de token)
+### ========================================
+
+# @name login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "alice@example.com",
+  "password": "SecurePass123!"
+}
+
+### Sauvegarder le token
+@token = {{login.response.body.access_token}}
+
+### ========================================
+### 3. TESTER SANS TOKEN (devrait échouer)
+### ========================================
+
+### GET Users SANS token (401 attendu)
+GET {{baseUrl}}/api/v1/users/
+
+### GET Places SANS token (401 attendu)
+GET {{baseUrl}}/api/v1/places/
+
+### ========================================
+### 4. TESTER AVEC TOKEN (devrait marcher)
+### ========================================
+
+### GET Users AVEC token
+GET {{baseUrl}}/api/v1/users/
+Authorization: Bearer {{token}}
+
+### GET User spécifique AVEC token
+GET {{baseUrl}}/api/v1/users/705e895c-86a0-493e-aaa7-f2f003f8fd81
+Authorization: Bearer {{token}}
+
+### GET Places AVEC token
+GET {{baseUrl}}/api/v1/places/
+Authorization: Bearer {{token}}
+
+### GET Reviews AVEC token
+GET {{baseUrl}}/api/v1/reviews/
+Authorization: Bearer {{token}}
+
+### GET Amenities AVEC token
+GET {{baseUrl}}/api/v1/amenities/
+Authorization: Bearer {{token}}
+
+### ========================================
+### 5. CRÉER DES RESSOURCES (avec token)
+### ========================================
+
+### Créer un Place
+POST {{baseUrl}}/api/v1/places/
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "title": "Bel appartement à Paris",
+  "description": "Studio cosy au coeur de Paris",
+  "price": 100,
+  "latitude": 48.8566,
+  "longitude": 2.3522
+}
+
+### Créer une Review
+POST {{baseUrl}}/api/v1/reviews/
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "place_id": "some-place-id",
+  "rating": 5,
+  "comment": "Excellent séjour!"
+}
+
+### Créer une Amenity
+POST {{baseUrl}}/api/v1/amenities/
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "name": "WiFi"
+}
+
+### ========================================
+### 6. MODIFIER DES RESSOURCES (avec token)
+### ========================================
+
+### Modifier un User
+PUT {{baseUrl}}/api/v1/users/705e895c-86a0-493e-aaa7-f2f003f8fd81
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "first_name": "Alicia",
+  "last_name": "Martinez"
+}
+
+### ========================================
+### 7. ENDPOINT PROTÉGÉ DE TEST
+### ========================================
+
+### Accéder à /protected avec token
+GET {{baseUrl}}/api/v1/protected
+Authorization: Bearer {{token}}
+
+### Accéder à /protected SANS token (devrait échouer)
+GET {{baseUrl}}/api/v1/protected
+```
+
+---
+
+## 📍 Où Mettre Ce Fichier ?
+
+**Emplacement :**
+```
+part3/
+└── hbnb/
+    └── api_tests.http  ← ICI
