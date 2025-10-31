@@ -1,6 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from app.services import facade
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
    
 api = Namespace('users', description='User operations')
@@ -19,8 +19,16 @@ class UserList(Resource):
     @api.response(201, 'User successfully created')
     @api.response(400, 'Email already registered')
     @api.response(400, 'Invalid input data')
+    @jwt_required()
+    
     def post(self):
         """Register a new user"""
+        claims = get_jwt()
+        is_admin = claims.get('is_admin', False)
+        
+        if not is_admin:
+            return {'error': 'Admin privileges required'}, 403 
+        
         user_data = api.payload
 
         # Simulate email uniqueness check (to be replaced by real validation with persistence)
@@ -57,9 +65,8 @@ class UserResource(Resource):
     def put(self, user_id):
         """Update a user's information"""
         current_user = get_jwt_identity()
-        
-        if current_user != user_id:
-            return {'error': 'Unauthorized action'}, 403
+        claims = get_jwt()
+        is_admin = claims.get('is_admin', False)
         
         user = facade.get_user(user_id)
         if not user:
@@ -67,8 +74,24 @@ class UserResource(Resource):
 
         user_data = api.payload
         
+        # BRANCHE 1 : Si c'est un admin 
+        if is_admin:
+        
+            if 'email' in user_data:
+                existing = facade.get_user_by_email(user_data['email'])
+                if existing and existing.id != user_id:  
+                    return {'error': 'Email already in use'}, 400
+        
+            updated_user = facade.update_user(user_id, user_data)
+            return {'id': updated_user.id, 'first_name': updated_user.first_name, 'last_name': updated_user.last_name, 'email': updated_user.email}, 200
+        
+        # BRANCHE 2 : Si c'est un user normal 
+        
+        if current_user != user_id:
+            return {'error': 'Unauthorized action'}, 403
+    
         if 'email' in user_data or 'password' in user_data:
             return {'error': 'You cannot modify email or password'}, 400
-        
+
         updated_user = facade.update_user(user_id, user_data)
         return {'id': updated_user.id, 'first_name': updated_user.first_name, 'last_name': updated_user.last_name, 'email': updated_user.email}, 200
