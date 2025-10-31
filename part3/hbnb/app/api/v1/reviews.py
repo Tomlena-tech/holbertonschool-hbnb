@@ -117,9 +117,9 @@ class ReviewResource(Resource):
         
         if str(review.user.id) != current_user:
             return {'error': 'Unauthorized action'}, 403
-
         
         success = facade.delete_review(review_id)
+        return {'message': 'Review deleted successfully'}, 200
        
 
 @api.route('/places/<place_id>/reviews')
