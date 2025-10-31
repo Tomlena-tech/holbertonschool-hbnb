@@ -44,8 +44,9 @@ class PlaceList(Resource):
     @api.response(400, 'Invalid input data')
     def post(self):
         """Register a new place"""
+        current_user = get_jwt_identity()
         place_data = api.payload
-
+        place_data['owner_id'] = current_user 
         new_place = facade.create_place(place_data)
         if not new_place:
             return {'error': 'Owner not found'}, 400
@@ -61,7 +62,6 @@ class PlaceList(Resource):
         }, 201
 
     @api.response(200, 'List of places retrieved successfully')
-    @jwt_required()
     def get(self):
         """Retrieve a list of all places"""
         places = facade.get_all_places()
@@ -77,7 +77,6 @@ class PlaceList(Resource):
 
 @api.route('/<place_id>')
 class PlaceResource(Resource):
-    @jwt_required()
     @api.response(200, 'Place details retrieved successfully')
     @api.response(404, 'Place not found')
     def get(self, place_id):
@@ -123,9 +122,14 @@ class PlaceResource(Resource):
     @jwt_required()
     def put(self, place_id):
         """Update a place's information"""
+        current_user = get_jwt_identity()
         place = facade.get_place(place_id)
         if not place:
             return {'error': 'Place not found'}, 404
+        
+        if str(place.owner.id) != current_user:
+            return {'error': 'Unauthorized action'}, 403
+
 
         place_data = api.payload
         updated_place = facade.update_place(place_id, place_data)
