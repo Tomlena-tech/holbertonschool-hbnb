@@ -1,4 +1,5 @@
 from .base_model import BaseModel
+from flask import current_app
 import re
 
 
@@ -24,7 +25,7 @@ class User(BaseModel):
     """
     emails = set()
 
-    def __init__(self, first_name, last_name, email, is_admin=False):
+    def __init__(self, first_name, last_name, email, password, is_admin=False):
         """
         Initialize a new User instance.
 
@@ -42,9 +43,20 @@ class User(BaseModel):
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
+        self.hash_password(password)
         self.is_admin = is_admin
         self.places = []
         self.reviews = []
+
+    def hash_password(self, password):
+        """Hashes the password before storing it."""
+        bcrypt = current_app.extensions['bcrypt']
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def verify_password(self, password):
+        """Verifies if the provided password matches the hashed password."""
+        bcrypt = current_app.extensions['bcrypt']
+        return bcrypt.check_password_hash(self.password, password)
 
     @property
     def first_name(self):
