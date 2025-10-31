@@ -20,7 +20,25 @@ class ReviewList(Resource):
     @jwt_required()
     def post(self):
         """Register a new review"""
+        current_user = get_jwt_identity()
         review_data = api.payload
+        
+         # ✅ Forcer le user_id
+        review_data['user_id'] = current_user
+    
+         # ✅ Vérifier qu'on ne review pas son propre place
+        place = facade.get_place(review_data['place_id'])
+        if not place:
+            return {'error': 'Place not found'}, 404
+    
+        if str(place.owner.id) == current_user:
+            return {'error': 'You cannot review your own place'}, 400
+    
+        # ✅ Vérifier qu'on n'a pas déjà reviewé ce place
+        existing_reviews = [r for r in place.reviews if str(r.user.id) == current_user]
+        if existing_reviews:
+            return {'error': 'You have already reviewed this place'}, 400
+        
 
         new_review = facade.create_review(review_data)
         if not new_review:
@@ -74,9 +92,13 @@ class ReviewResource(Resource):
     @jwt_required()
     def put(self, review_id):
         """Update a review's information"""
+        current_user = get_jwt_identity()
         review = facade.get_review(review_id)
         if not review:
             return {'error': 'Review not found'}, 404
+        
+        if str(review.user.id) != current_user:
+            return {'error': 'Unauthorized action'}, 403
 
         review_data = api.payload
         updated_review = facade.update_review(review_id, review_data)
@@ -87,11 +109,18 @@ class ReviewResource(Resource):
     @jwt_required()
     def delete(self, review_id):
         """Delete a review"""
-        success = facade.delete_review(review_id)
-        if not success:
+        current_user = get_jwt_identity()
+        review = facade.get_review(review_id)
+        
+        if not review:
             return {'error': 'Review not found'}, 404
+        
+        if str(review.user.id) != current_user:
+            return {'error': 'Unauthorized action'}, 403
 
-        return {'message': 'Review deleted successfully'}, 200
+        
+        success = facade.delete_review(review_id)
+       
 
 @api.route('/places/<place_id>/reviews')
 class PlaceReviewList(Resource):
