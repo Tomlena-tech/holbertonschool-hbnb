@@ -21,6 +21,11 @@ class ReviewList(Resource):
         review_data = api.payload
 
         new_review = facade.create_review(review_data)
+
+        # Check if the result is an error (dict with 'error' key)
+        if isinstance(new_review, dict) and 'error' in new_review:
+            return new_review, 400
+
         if not new_review:
             return {'error': 'User or Place not found'}, 400
 

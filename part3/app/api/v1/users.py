@@ -58,3 +58,16 @@ class UserResource(Resource):
         user_data = api.payload
         updated_user = facade.update_user(user_id, user_data)
         return {'id': updated_user.id, 'first_name': updated_user.first_name, 'last_name': updated_user.last_name, 'email': updated_user.email}, 200
+
+    @api.response(200, 'User deleted successfully')
+    @api.response(404, 'User not found')
+    def delete(self, user_id):
+        """Delete a user"""
+        user = facade.get_user(user_id)
+        if not user:
+            return {'error': 'User not found'}, 404
+
+        success = facade.delete_user(user_id)
+        if success:
+            return {'message': 'User deleted successfully'}, 200
+        return {'error': 'Failed to delete user'}, 500

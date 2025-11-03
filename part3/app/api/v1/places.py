@@ -125,3 +125,16 @@ class PlaceResource(Resource):
         place_data = api.payload
         updated_place = facade.update_place(place_id, place_data)
         return {'message': 'Place updated successfully'}, 200
+
+    @api.response(200, 'Place deleted successfully')
+    @api.response(404, 'Place not found')
+    def delete(self, place_id):
+        """Delete a place"""
+        place = facade.get_place(place_id)
+        if not place:
+            return {'error': 'Place not found'}, 404
+
+        success = facade.delete_place(place_id)
+        if success:
+            return {'message': 'Place deleted successfully'}, 200
+        return {'error': 'Failed to delete place'}, 500

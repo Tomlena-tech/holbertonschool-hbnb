@@ -101,6 +101,16 @@ class HBnBFacade:
         if not user or not place:
             return None
 
+        # CRITICAL BUSINESS RULE: User cannot review their own place
+        if place.owner.id == user_id:
+            return {'error': 'Cannot review your own place', 'code': 'OWNER_REVIEW'}
+
+        # Check for duplicate review (one review per user per place)
+        existing_reviews = self.review_repo.get_all()
+        for review in existing_reviews:
+            if review.user.id == user_id and review.place.id == place_id:
+                return {'error': 'You have already reviewed this place', 'code': 'DUPLICATE_REVIEW'}
+
         review = Review(
             text=review_data['text'],
             rating=review_data['rating'],
@@ -133,4 +143,28 @@ class HBnBFacade:
         if not review:
             return False
         self.review_repo.delete(review_id)
+        return True
+
+    def delete_user(self, user_id):
+        """Delete a user by ID"""
+        user = self.user_repo.get(user_id)
+        if not user:
+            return False
+        self.user_repo.delete(user_id)
+        return True
+
+    def delete_place(self, place_id):
+        """Delete a place by ID"""
+        place = self.place_repo.get(place_id)
+        if not place:
+            return False
+        self.place_repo.delete(place_id)
+        return True
+
+    def delete_amenity(self, amenity_id):
+        """Delete an amenity by ID"""
+        amenity = self.amenity_repo.get(amenity_id)
+        if not amenity:
+            return False
+        self.amenity_repo.delete(amenity_id)
         return True
