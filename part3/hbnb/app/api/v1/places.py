@@ -112,3 +112,23 @@ class PlaceResource(Resource):
             'longitude': updated_place.longitude,
             'owner_id': updated_place.owner_id
         }, 200
+    @jwt_required()  # ✅ JWT ACTIVÉ
+    @api.response(200, 'Place deleted successfully')
+    @api.response(404, 'Place not found')
+    @api.response(403, 'Unauthorized action')
+    def delete(self, place_id):
+        """Delete a place"""
+        current_user = get_jwt_identity()
+        claims = get_jwt()
+        is_admin = claims.get('is_admin', False)
+        
+        place = facade.get_place(place_id)
+        if not place:
+            return {'error': 'Place not found'}, 404
+        
+        # Check ownership or admin
+        if not is_admin and place.owner_id != current_user:
+            return {'error': 'Unauthorized action'}, 403
+        facade.delete_place(place_id)
+        return {'message': 'Place deleted successfully'}, 200
+    
