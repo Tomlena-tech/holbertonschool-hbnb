@@ -1,0 +1,50 @@
+erDiagram
+    USER ||--o{ PLACE : owns
+    USER ||--o{ REVIEW : writes
+    PLACE ||--o{ REVIEW : has
+    PLACE }o--o{ AMENITY : offers
+
+    USER {
+        string id PK "UUID"
+        string first_name "max 50 chars"
+        string last_name "max 50 chars"
+        string email UK "unique, validated"
+        string password_hash "bcrypt hash, 128 chars"
+        boolean is_admin "default false"
+        datetime created_at
+        datetime updated_at
+    }
+
+    PLACE {
+        string id PK "UUID"
+        string title "max 100 chars"
+        text description "optional"
+        float price "positive, per night"
+        float latitude "range -90.0 to 90.0"
+        float longitude "range -180.0 to 180.0"
+        string owner_id FK "references USER.id"
+        datetime created_at
+        datetime updated_at
+    }
+
+    REVIEW {
+        string id PK "UUID"
+        text text "required, non-empty"
+        integer rating "range 1-5"
+        string place_id FK "references PLACE.id"
+        string user_id FK "references USER.id"
+        datetime created_at
+        datetime updated_at
+    }
+
+    AMENITY {
+        string id PK "UUID"
+        string name UK "unique, max 50 chars"
+        datetime created_at
+        datetime updated_at
+    }
+
+    PLACE_AMENITY {
+        string place_id PK_FK "references PLACE.id"
+        string amenity_id PK_FK "references AMENITY.id"
+    }

@@ -16,9 +16,20 @@ class DevelopmentConfig(Config):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
+class ProductionConfig(Config):
+    DEBUG = False
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        'DATABASE_URL',
+        'mysql+pymysql://hbnb_user:hbnb_password@localhost/hbnb_prod'
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Security: Use strong secrets in production
+    SECRET_KEY = os.getenv('SECRET_KEY')  # Must be set in production
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')  # Must be set in production
 
 
 config = {
     'development': DevelopmentConfig,
+    'production': ProductionConfig,
     'default': DevelopmentConfig
 }
