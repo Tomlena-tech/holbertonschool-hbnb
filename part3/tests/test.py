@@ -15,7 +15,18 @@ Test Coverage:
         - Review business rules
         - User profile management
         - Review CRUD operations
+    - Task 4: Administrator access control
+        - Admin user seeding
+        - Admin-only endpoint restrictions
+        - Admin privilege extensions
+        - Admin ownership bypass
 """
+
+import sys
+import os
+
+# Add parent directory to Python path to allow imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app import create_app
 from app.models.user import User
@@ -702,6 +713,446 @@ def test_review_crud_operations():
 
 
 # ============================================================================
+# TASK 4: Administrator Access Control
+# ============================================================================
+def test_task_4():
+    """
+    Task 4: Administrator access control testing.
+
+    Tests:
+        4.1 - Admin User Seeding
+        4.2 - Admin-Only Endpoint Restrictions
+        4.3 - Admin Email/Password Modification
+        4.4 - Admin Ownership Bypass (Places & Reviews)
+    """
+    print_section("TASK 4: Administrator Access Control")
+
+    # Test 4.1: Admin User Seeding
+    test_admin_seeding()
+
+    # Test 4.2: Admin-Only Endpoint Restrictions
+    test_admin_only_endpoints()
+
+    # Test 4.3: Admin Email/Password Modification
+    test_admin_email_password_modification()
+
+    # Test 4.4: Admin Ownership Bypass
+    test_admin_ownership_bypass()
+
+
+# 4.1: Admin User Seeding
+def test_admin_seeding():
+    """Test that admin user is automatically seeded on startup."""
+    print_subsection("Test 4.1: Admin User Seeding")
+
+    with app.app_context():
+        # Check if admin user exists
+        admin = facade.get_user_by_email("admin@hbnb.io")
+
+        runner.assert_true(
+            admin is not None,
+            "Admin user existence",
+            "Admin user was automatically created",
+            "Admin user not found in database"
+        )
+
+        if admin:
+            runner.assert_true(
+                admin.is_admin,
+                "Admin user privileges",
+                "Admin user has is_admin=True",
+                f"Admin user is_admin flag is {admin.is_admin}"
+            )
+
+
+# 4.2: Admin-Only Endpoint Restrictions
+def test_admin_only_endpoints():
+    """Test that certain endpoints require admin privileges."""
+    print_subsection("Test 4.2: Admin-Only Endpoint Restrictions")
+
+    with app.app_context():
+        # Create a regular user
+        regular_user = facade.create_user({
+            "first_name": "Regular",
+            "last_name": "User",
+            "email": "regular.admin@test.com",
+            "password": "Pass123!"
+        })
+
+        with app.test_client() as client:
+            # Get admin token
+            admin_login = client.post(
+                "/api/v1/auth/login",
+                json={"email": "admin@hbnb.io", "password": "admin1234"}
+            )
+            admin_token = admin_login.get_json()["access_token"]
+
+            # Get regular user token
+            user_login = client.post(
+                "/api/v1/auth/login",
+                json={"email": "regular.admin@test.com", "password": "Pass123!"}
+            )
+            user_token = user_login.get_json()["access_token"]
+
+            # Test 1: Admin can create users
+            admin_create_user = client.post(
+                "/api/v1/users/",
+                json={
+                    "first_name": "New",
+                    "last_name": "User",
+                    "email": "new.admin@test.com",
+                    "password": "Pass123!"
+                },
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                admin_create_user.status_code,
+                201,
+                "Admin can create users",
+                f"- Response: {admin_create_user.get_json()}"
+            )
+
+            # Test 2: Regular user cannot create users
+            user_create_user = client.post(
+                "/api/v1/users/",
+                json={
+                    "first_name": "Blocked",
+                    "last_name": "User",
+                    "email": "blocked.admin@test.com",
+                    "password": "Pass123!"
+                },
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+            runner.assert_equal(
+                user_create_user.status_code,
+                403,
+                "Regular user blocked from creating users",
+                f"- Should return 403 Forbidden"
+            )
+
+            runner.assert_true(
+                "Admin privileges required" in
+                user_create_user.get_json().get("error", ""),
+                "Correct error message for non-admin",
+                "Error message indicates admin privileges required",
+                f"Wrong error: {user_create_user.get_json()}"
+            )
+
+            # Test 3: Admin can create amenities
+            admin_create_amenity = client.post(
+                "/api/v1/amenities/",
+                json={"name": "Admin Amenity"},
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                admin_create_amenity.status_code,
+                201,
+                "Admin can create amenities",
+                f"- Response: {admin_create_amenity.get_json()}"
+            )
+
+            # Test 4: Regular user cannot create amenities
+            user_create_amenity = client.post(
+                "/api/v1/amenities/",
+                json={"name": "User Amenity"},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+            runner.assert_equal(
+                user_create_amenity.status_code,
+                403,
+                "Regular user blocked from creating amenities",
+                f"- Should return 403 Forbidden"
+            )
+
+            # Test 5: Admin can update amenities
+            amenity_id = admin_create_amenity.get_json()["id"]
+            admin_update_amenity = client.put(
+                f"/api/v1/amenities/{amenity_id}",
+                json={"name": "Updated Amenity"},
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                admin_update_amenity.status_code,
+                200,
+                "Admin can update amenities",
+                f"- Response: {admin_update_amenity.get_json()}"
+            )
+
+            # Test 6: Regular user cannot update amenities
+            user_update_amenity = client.put(
+                f"/api/v1/amenities/{amenity_id}",
+                json={"name": "Hacked Amenity"},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+            runner.assert_equal(
+                user_update_amenity.status_code,
+                403,
+                "Regular user blocked from updating amenities",
+                f"- Should return 403 Forbidden"
+            )
+
+
+# 4.3: Admin Email/Password Modification
+def test_admin_email_password_modification():
+    """Test that admins can modify any user's email and password."""
+    print_subsection("Test 4.3: Admin Email/Password Modification")
+
+    with app.app_context():
+        # Create a test user
+        test_user = facade.create_user({
+            "first_name": "Email",
+            "last_name": "Test",
+            "email": "email.test@test.com",
+            "password": "Pass123!"
+        })
+
+        with app.test_client() as client:
+            # Get admin token
+            admin_login = client.post(
+                "/api/v1/auth/login",
+                json={"email": "admin@hbnb.io", "password": "admin1234"}
+            )
+            admin_token = admin_login.get_json()["access_token"]
+
+            # Get user token
+            user_login = client.post(
+                "/api/v1/auth/login",
+                json={"email": "email.test@test.com", "password": "Pass123!"}
+            )
+            user_token = user_login.get_json()["access_token"]
+
+            # Test 1: Regular user cannot modify email
+            user_update = client.put(
+                f"/api/v1/users/{test_user.id}",
+                json={"email": "newemail@test.com"},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+            runner.assert_equal(
+                user_update.status_code,
+                400,
+                "Regular user blocked from changing email",
+                f"- Should return 400 Bad Request"
+            )
+
+            # Test 2: Admin can modify user's email
+            admin_update_email = client.put(
+                f"/api/v1/users/{test_user.id}",
+                json={"email": "admin.changed@test.com"},
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                admin_update_email.status_code,
+                200,
+                "Admin can modify user email",
+                f"- Response: {admin_update_email.get_json()}"
+            )
+
+            runner.assert_equal(
+                admin_update_email.get_json().get("email"),
+                "admin.changed@test.com",
+                "Email successfully updated by admin",
+                "- Email should be changed to admin.changed@test.com"
+            )
+
+            # Test 3: Admin can modify user's password
+            admin_update_password = client.put(
+                f"/api/v1/users/{test_user.id}",
+                json={"password": "NewPass123!"},
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                admin_update_password.status_code,
+                200,
+                "Admin can modify user password",
+                f"- Response: {admin_update_password.get_json()}"
+            )
+
+            # Test 4: Verify new password works
+            new_login = client.post(
+                "/api/v1/auth/login",
+                json={"email": "admin.changed@test.com", "password": "NewPass123!"}
+            )
+
+            runner.assert_equal(
+                new_login.status_code,
+                200,
+                "New password works after admin change",
+                f"- Login successful with new password"
+            )
+
+            # Test 5: Admin validates email uniqueness
+            duplicate_email = client.put(
+                f"/api/v1/users/{test_user.id}",
+                json={"email": "admin@hbnb.io"},  # Try to use admin's email
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                duplicate_email.status_code,
+                400,
+                "Admin cannot set duplicate email",
+                f"- Should enforce email uniqueness"
+            )
+
+            runner.assert_true(
+                "Email already in use" in
+                duplicate_email.get_json().get("error", ""),
+                "Correct duplicate email error message",
+                "Error message indicates email is in use",
+                f"Wrong error: {duplicate_email.get_json()}"
+            )
+
+
+# 4.4: Admin Ownership Bypass
+def test_admin_ownership_bypass():
+    """Test that admins can bypass ownership restrictions."""
+    print_subsection("Test 4.4: Admin Ownership Bypass")
+
+    with app.app_context():
+        # Create owner user
+        owner = facade.create_user({
+            "first_name": "Owner",
+            "last_name": "Bypass",
+            "email": "owner.bypass@test.com",
+            "password": "Pass123!"
+        })
+
+        # Create reviewer user
+        reviewer = facade.create_user({
+            "first_name": "Reviewer",
+            "last_name": "Bypass",
+            "email": "reviewer.bypass@test.com",
+            "password": "Pass123!"
+        })
+
+        with app.test_client() as client:
+            # Get tokens
+            admin_login = client.post(
+                "/api/v1/auth/login",
+                json={"email": "admin@hbnb.io", "password": "admin1234"}
+            )
+            admin_token = admin_login.get_json()["access_token"]
+
+            owner_login = client.post(
+                "/api/v1/auth/login",
+                json={"email": "owner.bypass@test.com", "password": "Pass123!"}
+            )
+            owner_token = owner_login.get_json()["access_token"]
+
+            reviewer_login = client.post(
+                "/api/v1/auth/login",
+                json={"email": "reviewer.bypass@test.com", "password": "Pass123!"}
+            )
+            reviewer_token = reviewer_login.get_json()["access_token"]
+
+            # Create a place owned by owner
+            place_res = client.post(
+                "/api/v1/places/",
+                json={
+                    "title": "Owner's Place",
+                    "description": "Test place",
+                    "price": 100.0,
+                    "latitude": 37.0,
+                    "longitude": -122.0
+                },
+                headers={"Authorization": f"Bearer {owner_token}"}
+            )
+            place_id = place_res.get_json()["id"]
+
+            # Test 1: Admin can update any place
+            admin_update_place = client.put(
+                f"/api/v1/places/{place_id}",
+                json={"title": "Admin Modified Place"},
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                admin_update_place.status_code,
+                200,
+                "Admin can update any place (ownership bypass)",
+                f"- Response: {admin_update_place.get_json()}"
+            )
+
+            # Create a review by reviewer
+            review_res = client.post(
+                "/api/v1/reviews/",
+                json={
+                    "place_id": place_id,
+                    "text": "Great place!",
+                    "rating": 5
+                },
+                headers={"Authorization": f"Bearer {reviewer_token}"}
+            )
+            review_id = review_res.get_json()["id"]
+
+            # Test 2: Admin can update any review
+            admin_update_review = client.put(
+                f"/api/v1/reviews/{review_id}",
+                json={"text": "Admin modified review", "rating": 3},
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                admin_update_review.status_code,
+                200,
+                "Admin can update any review (ownership bypass)",
+                f"- Response: {admin_update_review.get_json()}"
+            )
+
+            # Test 3: Admin can delete any review
+            admin_delete_review = client.delete(
+                f"/api/v1/reviews/{review_id}",
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                admin_delete_review.status_code,
+                200,
+                "Admin can delete any review (ownership bypass)",
+                f"- Response: {admin_delete_review.get_json()}"
+            )
+
+            # Verify deletion
+            verify_delete = client.get(f"/api/v1/reviews/{review_id}")
+            runner.assert_equal(
+                verify_delete.status_code,
+                404,
+                "Review deleted by admin verified",
+                f"- Review should not exist after admin deletion"
+            )
+
+            # Test 4: Admin can modify any user
+            admin_modify_user = client.put(
+                f"/api/v1/users/{owner.id}",
+                json={"first_name": "AdminModified"},
+                headers={"Authorization": f"Bearer {admin_token}"}
+            )
+
+            runner.assert_equal(
+                admin_modify_user.status_code,
+                200,
+                "Admin can modify any user",
+                f"- Response: {admin_modify_user.get_json()}"
+            )
+
+            runner.assert_equal(
+                admin_modify_user.get_json().get("first_name"),
+                "AdminModified",
+                "User modified by admin successfully",
+                "- First name should be 'AdminModified'"
+            )
+
+
+# ============================================================================
 # MAIN TEST EXECUTION
 # ============================================================================
 if __name__ == "__main__":
@@ -721,6 +1172,9 @@ if __name__ == "__main__":
 
     # Task 3: Protected Endpoints & API Testing (includes all subtasks)
     test_task_3()
+
+    # Task 4: Administrator Access Control (includes all subtasks)
+    test_task_4()
 
     # Print summary
     runner.print_summary()

@@ -18,6 +18,40 @@ bcrypt = Bcrypt()
 jwt = JWTManager()
 
 
+def seed_admin_user(app):
+    """
+    Seeds an initial admin user if no admin exists in the system.
+
+    This function checks if any admin user exists, and if not,
+    creates one using credentials from the app configuration.
+
+    Args:
+        app: The Flask application instance
+    """
+    from app.services import facade
+
+    # Check if any admin user already exists
+    all_users = facade.get_all_users()
+    admin_exists = any(user.is_admin for user in all_users)
+
+    if not admin_exists:
+        admin_data = {
+            'first_name': app.config['ADMIN_FIRST_NAME'],
+            'last_name': app.config['ADMIN_LAST_NAME'],
+            'email': app.config['ADMIN_EMAIL'],
+            'password': app.config['ADMIN_PASSWORD'],
+            'is_admin': True
+        }
+
+        # Check if user with admin email already exists (but is not admin)
+        existing_user = facade.get_user_by_email(admin_data['email'])
+        if existing_user:
+            print(f"User with email {admin_data['email']} already exists but is not admin. Skipping admin creation.")
+        else:
+            facade.create_user(admin_data)
+            print(f"Admin user created: {admin_data['email']}")
+
+
 def create_app(config_class="config.DevelopmentConfig"):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -38,6 +72,10 @@ def create_app(config_class="config.DevelopmentConfig"):
     app.extensions['bcrypt'] = bcrypt
     jwt.init_app(app)
     app.extensions['jwt'] = jwt
+
+    # Seed the initial admin user
+    with app.app_context():
+        seed_admin_user(app)
 
     # Register the users namespace
     api.add_namespace(users_ns, path='/api/v1/users')

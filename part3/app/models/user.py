@@ -174,6 +174,21 @@ class User(BaseModel):
         """
         self.reviews.remove(review)
 
+    def update(self, data):
+        """
+        Update user attributes, with special handling for password hashing.
+
+        Args:
+            data (dict): A dictionary containing attribute names and their new values.
+        """
+        for key, value in data.items():
+            if key == 'password':
+                # Hash the password instead of setting it directly
+                self.hash_password(value)
+            elif hasattr(self, key):
+                setattr(self, key, value)
+        self.save()  # Update the updated_at timestamp
+
     def to_dict(self):
         """
         Convert the User instance into a dictionary representation.
