@@ -1,12 +1,18 @@
-# app/__init__.py  (lignes 1-2)
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# app/api/__init__.py
 from flask import Flask
-from flask_restx import Api
-from app.api.v1.users import api as users_ns
-from app.api.v1.amenities import api as amenities_ns
-from app.api.v1.places import api as places_ns
-...
+from flask_sqlalchemy import SQLAlchemy
+from flask_jwt_extended import JWTManager
+from config import Config
+from app.api.v1 import api_v1   # ← notre API unique
+
+db = SQLAlchemy()
+jwt = JWTManager()
+
+def create_app(config_class=Config):
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+
+    db.init_app(app)
+    jwt.init_app(app)
+    api_v1.init_app(app)         # ← branchement unique
+
+    return app

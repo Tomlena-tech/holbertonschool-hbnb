@@ -1,4 +1,4 @@
-from app.persistence.repository import InMemoryRepository
+from app.persistence.repositories import UserRepository, PlaceRepository, ReviewRepository, AmenityRepository
 from app.models.user import User
 from app.models.amenity import Amenity
 from app.models.place import Place
@@ -18,10 +18,10 @@ class HBnBFacade:
         Initialise les différents dépôts en mémoire.
         """
 
-        self.user_repo = InMemoryRepository()
-        self.place_repo = InMemoryRepository()
-        self.review_repo = InMemoryRepository()
-        self.amenity_repo = InMemoryRepository()
+        self.user_repo = UserRepository()
+        self.place_repo = PlaceRepository()
+        self.review_repo = ReviewRepository()
+        self.amenity_repo = AmenityRepository()
 
     def create_user(self, user_data):
         user = User(**user_data)
@@ -70,7 +70,7 @@ class HBnBFacade:
             price=place_data['price'],
             latitude=place_data['latitude'],
             longitude=place_data['longitude'],
-            owner=owner
+            owner_id=owner_id
         )
 
         for amenity_id in amenity_ids:
@@ -100,26 +100,18 @@ class HBnBFacade:
 
         if not user or not place:
             return None
-
-        # CRITICAL BUSINESS RULE: User cannot review their own place
-        if place.owner.id == user_id:
-            return {'error': 'Cannot review your own place', 'code': 'OWNER_REVIEW'}
-
-        # Check for duplicate review (one review per user per place)
-        existing_reviews = self.review_repo.get_all()
-        for review in existing_reviews:
-            if review.user.id == user_id and review.place.id == place_id:
-                return {'error': 'You have already reviewed this place', 'code': 'DUPLICATE_REVIEW'}
+        
+        if user_id == place.owner_id:
+            raise ValueError("Cannot review your own place")
 
         review = Review(
             text=review_data['text'],
             rating=review_data['rating'],
-            place=place,
-            user=user
+            place_id=place_id,
+            user_id=user_id
         )
 
         self.review_repo.add(review)
-        place.add_review(review)
         return review
 
     def get_review(self, review_id):
@@ -129,10 +121,7 @@ class HBnBFacade:
         return self.review_repo.get_all()
 
     def get_reviews_by_place(self, place_id):
-        place = self.place_repo.get(place_id)
-        if not place:
-            return None
-        return place.reviews
+        return self.revierepo.gereviews_by_place(place_id)
 
     def update_review(self, review_id, review_data):
         self.review_repo.update(review_id, review_data)
@@ -143,28 +132,4 @@ class HBnBFacade:
         if not review:
             return False
         self.review_repo.delete(review_id)
-        return True
-
-    def delete_user(self, user_id):
-        """Delete a user by ID"""
-        user = self.user_repo.get(user_id)
-        if not user:
-            return False
-        self.user_repo.delete(user_id)
-        return True
-
-    def delete_place(self, place_id):
-        """Delete a place by ID"""
-        place = self.place_repo.get(place_id)
-        if not place:
-            return False
-        self.place_repo.delete(place_id)
-        return True
-
-    def delete_amenity(self, amenity_id):
-        """Delete an amenity by ID"""
-        amenity = self.amenity_repo.get(amenity_id)
-        if not amenity:
-            return False
-        self.amenity_repo.delete(amenity_id)
         return True
