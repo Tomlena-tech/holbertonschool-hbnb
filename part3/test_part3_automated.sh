@@ -70,8 +70,8 @@ echo -e "${YELLOW}TEST 1: Login with admin credentials${NC}"
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/auth/login \
     -H "Content-Type: application/json" \
     -d '{
-        "email": "admin@hbnb.com",
-        "password": "admin123"
+        "email": "admin@hbnb.io",
+        "password": "admin1234"
     }')
 
 test_case "Admin login" 200 "$RESPONSE"
@@ -81,6 +81,8 @@ ADMIN_TOKEN=$(echo "$RESPONSE" | sed '$d' | grep -o '"access_token":"[^"]*' | cu
 
 if [ -z "$ADMIN_TOKEN" ]; then
     echo -e "${RED}❌ Failed to get admin token${NC}"
+    echo "Response body:"
+    echo "$RESPONSE" | sed '$d'
     exit 1
 fi
 echo -e "${GREEN}   Token obtained: ${ADMIN_TOKEN:0:20}...${NC}"
@@ -91,7 +93,7 @@ echo -e "${YELLOW}TEST 2: Login with wrong password${NC}"
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/auth/login \
     -H "Content-Type: application/json" \
     -d '{
-        "email": "admin@hbnb.com",
+        "email": "admin@hbnb.io",
         "password": "wrongpassword"
     }')
 
