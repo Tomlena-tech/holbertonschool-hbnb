@@ -25,7 +25,10 @@ class PlaceList(Resource):
         place_data = api.payload
         place_data['owner_id'] = current_user  # Force owner_id from token
         
-        new_place = facade.create_place(place_data)
+        try:
+            new_place = facade.create_place(place_data)
+        except (ValueError, TypeError) as e:
+            return {'error': str(e)}, 400
         if not new_place:
             return {'error': 'Owner not found'}, 400
 
@@ -96,7 +99,10 @@ class PlaceResource(Resource):
             return {'error': 'Unauthorized action'}, 403
 
         place_data = api.payload
-        updated_place = facade.update_place(place_id, place_data)
+        try:
+            updated_place = facade.update_place(place_id, place_data)
+        except (ValueError, TypeError) as e:
+            return {'error': str(e)}, 400
         return {
             'id': updated_place.id,
             'title': updated_place.title,
