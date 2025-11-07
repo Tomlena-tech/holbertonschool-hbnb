@@ -103,6 +103,11 @@ class HBnBFacade:
         
         if user_id == place.owner_id:
             raise ValueError("Cannot review your own place")
+        
+        existing_reviews = self.review_repo.get_by_place(place_id)
+        for review in existing_reviews:
+           if review.user_id == user_id:
+            raise ValueError("You have already reviewed this place")
 
         review = Review(
             text=review_data['text'],
