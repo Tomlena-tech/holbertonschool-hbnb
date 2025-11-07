@@ -30,7 +30,7 @@ test_case() {
 
     # Extract status code from response
     status=$(echo "$response" | tail -n 1)
-    body=$(echo "$response" | head -n -1)
+    body=$(echo "$response" | sed '$d')
 
     if [ "$status" -eq "$expected_status" ]; then
         echo -e "${GREEN}✅ PASS${NC} - $test_name (Status: $status)"
@@ -77,7 +77,7 @@ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/auth/login \
 test_case "Admin login" 200 "$RESPONSE"
 
 # Extract admin token
-ADMIN_TOKEN=$(echo "$RESPONSE" | head -n -1 | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
+ADMIN_TOKEN=$(echo "$RESPONSE" | sed '$d' | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
 
 if [ -z "$ADMIN_TOKEN" ]; then
     echo -e "${RED}❌ Failed to get admin token${NC}"
@@ -146,7 +146,7 @@ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/users/ \
 test_case "Admin creates user" 201 "$RESPONSE"
 
 # Extract user ID
-USER_ID=$(echo "$RESPONSE" | head -n -1 | grep -o '"id":"[^"]*' | cut -d'"' -f4)
+USER_ID=$(echo "$RESPONSE" | sed '$d' | grep -o '"id":"[^"]*' | cut -d'"' -f4)
 echo -e "${GREEN}   User created with ID: $USER_ID${NC}"
 echo ""
 
@@ -162,7 +162,7 @@ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/auth/login \
 test_case "New user login" 200 "$RESPONSE"
 
 # Extract user token
-USER_TOKEN=$(echo "$RESPONSE" | head -n -1 | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
+USER_TOKEN=$(echo "$RESPONSE" | sed '$d' | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
 echo -e "${GREEN}   User token obtained${NC}"
 echo ""
 
@@ -204,7 +204,7 @@ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/places/ \
 test_case "Create place" 201 "$RESPONSE"
 
 # Extract place ID
-PLACE_ID=$(echo "$RESPONSE" | head -n -1 | grep -o '"id":"[^"]*' | cut -d'"' -f4)
+PLACE_ID=$(echo "$RESPONSE" | sed '$d' | grep -o '"id":"[^"]*' | cut -d'"' -f4)
 echo -e "${GREEN}   Place created with ID: $PLACE_ID${NC}"
 echo ""
 
@@ -256,7 +256,7 @@ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/amenities/ \
 test_case "Create amenity" 201 "$RESPONSE"
 
 # Extract amenity ID
-AMENITY_ID=$(echo "$RESPONSE" | head -n -1 | grep -o '"id":"[^"]*' | cut -d'"' -f4)
+AMENITY_ID=$(echo "$RESPONSE" | sed '$d' | grep -o '"id":"[^"]*' | cut -d'"' -f4)
 echo -e "${GREEN}   Amenity created with ID: $AMENITY_ID${NC}"
 echo ""
 
@@ -286,7 +286,7 @@ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/users/ \
         "is_admin": false
     }')
 
-USER2_ID=$(echo "$RESPONSE" | head -n -1 | grep -o '"id":"[^"]*' | cut -d'"' -f4)
+USER2_ID=$(echo "$RESPONSE" | sed '$d' | grep -o '"id":"[^"]*' | cut -d'"' -f4)
 
 # Login with second user
 RESPONSE=$(curl -s -X POST $BASE_URL/auth/login \
@@ -314,7 +314,7 @@ RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $BASE_URL/reviews/ \
 
 test_case "Create review" 201 "$RESPONSE"
 
-REVIEW_ID=$(echo "$RESPONSE" | head -n -1 | grep -o '"id":"[^"]*' | cut -d'"' -f4)
+REVIEW_ID=$(echo "$RESPONSE" | sed '$d' | grep -o '"id":"[^"]*' | cut -d'"' -f4)
 echo -e "${GREEN}   Review created with ID: $REVIEW_ID${NC}"
 echo ""
 
