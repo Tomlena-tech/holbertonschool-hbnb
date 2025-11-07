@@ -861,3 +861,8 @@ Task 3 implements comprehensive authentication and authorization for the HBnB ap
 - **Defense in Depth**: Multiple validation layers
 
 This implementation ensures secure, user-specific access control throughout the HBnB application.
+
+---
+
+**Previous**: [Task 2: JWT Authentication](TASK_02.md)
+**Next**: [Task 4: Administrator Access Control](TASK_04.md)

@@ -8,14 +8,17 @@ from app.api.v1.auth import api as auth_ns
 
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
+from flask_sqlalchemy import SQLAlchemy
 
 """
 Instantiate extensions:
 - Bcrypt for password hashing
 - JWTManager for handling JWT authentication
+- SQLAlchemy for database ORM
 """
 bcrypt = Bcrypt()
 jwt = JWTManager()
+db = SQLAlchemy()
 
 
 def seed_admin_user(app):
@@ -67,11 +70,13 @@ def create_app(config_class="config.DevelopmentConfig"):
     Initialize extensions with the Flask app:
     - bcrypt
     - jwt
+    - db (SQLAlchemy)
     """
     bcrypt.init_app(app)
     app.extensions['bcrypt'] = bcrypt
     jwt.init_app(app)
     app.extensions['jwt'] = jwt
+    db.init_app(app)
 
     # Seed the initial admin user
     with app.app_context():

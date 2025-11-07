@@ -779,3 +779,8 @@ Password hashing with bcrypt provides robust security for user credentials in th
 - **Battle-Tested**: Industry-standard algorithm
 
 This implementation ensures that even in the event of a database breach, user passwords remain protected.
+
+---
+
+**Previous**: [Task 0: Application Configuration](TASK_00.md)
+**Next**: [Task 2: JWT Authentication](TASK_02.md)

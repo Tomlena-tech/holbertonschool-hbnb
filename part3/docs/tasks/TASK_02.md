@@ -871,3 +871,8 @@ JWT authentication provides a robust, stateless authentication mechanism for the
 - **Standards-Based**: RFC 7519 compliant
 
 This implementation enables secure, scalable authentication for all protected API endpoints in the HBnB application.
+
+---
+
+**Previous**: [Task 1: Password Hashing with Bcrypt](TASK_01.md)
+**Next**: [Task 3: Authenticated User Access Endpoints](TASK_03.md)

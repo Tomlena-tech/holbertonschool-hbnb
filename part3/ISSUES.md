@@ -1,7 +1,7 @@
 # Issues and Solutions - HBnB Part 3
 
 > **Project**: HBnB Evolution - Auth & DB
-> **Phase**: Part 3 - Tasks 0-4
+> **Phase**: Part 3 - Tasks 0-5
 > **Last Updated**: November 2025
 
 This document tracks all issues encountered during development, their root causes, solutions implemented, and lessons learned. Each issue follows a structured format for clarity and future reference.
@@ -15,6 +15,7 @@ This document tracks all issues encountered during development, their root cause
 - [Issue #3: Administrator Access Control](#issue-3-administrator-access-control)
 - [Issue #4: ModuleNotFoundError in Test Suite](#issue-4-modulenotfounderror-in-test-suite)
 - [Issue #5: Plain Text Password Storage Vulnerability](#issue-5-plain-text-password-storage-vulnerability-critical)
+- [Issue #6: Database Repository Implementation](#issue-6-database-repository-implementation)
 
 ---
 
@@ -548,22 +549,338 @@ def update(self, data):
 
 ---
 
+## Issue #6: Database Repository Implementation
+
+**🏷️ Category**: Architecture | Task 5
+**📅 Date**: November 2025
+**⚡ Severity**: Medium
+**✅ Status**: Resolved
+
+### Problem Statement
+
+Need to transition from in-memory storage to persistent database storage using SQLAlchemy while maintaining the existing Repository interface. The challenge is to implement database persistence without breaking the application's abstraction layer.
+
+### Solution
+
+Implemented `SQLAlchemyRepository` class that implements the existing `Repository` interface, providing database persistence using SQLAlchemy ORM while maintaining compatibility with the facade pattern.
+
+### Files Modified
+
+#### 1. **`requirements.txt`** - Added Dependencies
+
+```txt
+flask-sqlalchemy
+sqlalchemy
+```
+
+**Purpose**: Added ORM and Flask integration dependencies for database operations.
+
+#### 2. **`config.py`** - Database Configuration
+
+```python
+class Config:
+    # Repository configuration
+    REPOSITORY_TYPE = os.getenv('REPOSITORY_TYPE', 'in_memory')
+
+    # SQLAlchemy database configuration
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ECHO = False
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///development.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ECHO = True  # Log SQL queries in development
+```
+
+**Key Features**:
+- ✅ Environment-based repository type selection
+- ✅ SQLite for development (simple, no external database needed)
+- ✅ SQL query logging in development mode
+- ✅ Extensible for production databases (MySQL, PostgreSQL)
+
+#### 3. **`app/__init__.py`** - SQLAlchemy Initialization
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+def create_app(config_class="config.DevelopmentConfig"):
+    # ... app setup ...
+
+    db.init_app(app)
+
+    # Seed the initial admin user
+    with app.app_context():
+        seed_admin_user(app)
+```
+
+**Purpose**: Initialize SQLAlchemy extension with Flask application context.
+
+#### 4. **`app/persistence/repository.py`** - SQLAlchemyRepository Implementation
+
+```python
+from abc import ABC, abstractmethod
+from app import db
+
+
+class SQLAlchemyRepository(Repository):
+    """
+    Database repository implementation using SQLAlchemy ORM.
+
+    This repository provides persistent storage using SQLAlchemy,
+    supporting various database backends (SQLite, MySQL, PostgreSQL).
+    """
+
+    def __init__(self, model):
+        """Initialize repository with a SQLAlchemy model class."""
+        self.model = model
+
+    def add(self, obj):
+        """Add a new object to the database."""
+        db.session.add(obj)
+        db.session.commit()
+
+    def get(self, obj_id):
+        """Retrieve an object by its ID."""
+        return db.session.get(self.model, obj_id)
+
+    def get_all(self):
+        """Retrieve all objects of this model type."""
+        return db.session.query(self.model).all()
+
+    def update(self, obj_id, data):
+        """Update an object with new data."""
+        obj = self.get(obj_id)
+        if obj:
+            obj.update(data)  # Calls model's update method
+            db.session.commit()
+
+    def delete(self, obj_id):
+        """Delete an object from the database."""
+        obj = self.get(obj_id)
+        if obj:
+            db.session.delete(obj)
+            db.session.commit()
+
+    def get_by_attribute(self, attr_name, attr_value):
+        """Find first object matching a specific attribute value."""
+        return db.session.query(self.model).filter(
+            getattr(self.model, attr_name) == attr_value
+        ).first()
+```
+
+**Design Highlights**:
+- ✅ Implements complete Repository interface
+- ✅ Generic implementation works with any SQLAlchemy model
+- ✅ Transaction management with commit after each operation
+- ✅ Leverages model's `update()` method (preserves password hashing!)
+- ✅ Clean separation of concerns (no business logic)
+
+#### 5. **`app/services/facade.py`** - Repository Integration
+
+```python
+from app.persistence.repository import InMemoryRepository, SQLAlchemyRepository
+from app.models.user import User
+
+class HBnBFacade:
+    def __init__(self):
+        """
+        Initialise les différents dépôts.
+        User repository uses SQLAlchemy for database persistence,
+        others use in-memory storage.
+        """
+        self.user_repo = SQLAlchemyRepository(User)  # ✅ Database storage
+        self.place_repo = InMemoryRepository()        # In-memory for now
+        self.review_repo = InMemoryRepository()       # In-memory for now
+        self.amenity_repo = InMemoryRepository()      # In-memory for now
+```
+
+**Migration Strategy**: Gradual transition (User first, others later in subsequent tasks)
+
+### Architecture
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│                    REPOSITORY PATTERN                          │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│   HBnBFacade (Business Logic)                                │
+│        │                                                      │
+│        ├─→ user_repo: SQLAlchemyRepository(User) ──→ Database│
+│        ├─→ place_repo: InMemoryRepository()      ──→ Memory  │
+│        ├─→ review_repo: InMemoryRepository()     ──→ Memory  │
+│        └─→ amenity_repo: InMemoryRepository()    ──→ Memory  │
+│                                                               │
+│   Repository Interface (Abstract Base Class)                  │
+│        ├─ add(obj)                                           │
+│        ├─ get(obj_id)                                        │
+│        ├─ get_all()                                          │
+│        ├─ update(obj_id, data)                               │
+│        ├─ delete(obj_id)                                     │
+│        └─ get_by_attribute(attr_name, attr_value)            │
+│                                                               │
+│   Implementations:                                            │
+│        ├─ InMemoryRepository (dict-based)                    │
+│        └─ SQLAlchemyRepository (database-backed)             │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────┐
+│                    DATA FLOW EXAMPLE                           │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  1. facade.create_user(data)                                 │
+│     │                                                         │
+│  2. user = User(**data)           ← Model instantiation      │
+│     │                                                         │
+│  3. user_repo.add(user)           ← SQLAlchemyRepository     │
+│     │                                                         │
+│  4. db.session.add(user)          ← SQLAlchemy ORM           │
+│     │                                                         │
+│  5. db.session.commit()           ← Transaction commit       │
+│     │                                                         │
+│  6. ✅ User persisted to database                             │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### Design Rationale
+
+| Decision | Rationale |
+|----------|-----------|
+| **Repository Pattern** | Maintains abstraction, allows switching storage backends |
+| **Interface Compatibility** | SQLAlchemyRepository implements same interface as InMemoryRepository |
+| **Gradual Migration** | User model first, others later (reduces risk) |
+| **Generic Implementation** | `model` parameter makes SQLAlchemyRepository reusable |
+| **Import from app** | `from app import db` accesses initialized SQLAlchemy instance |
+| **Commit per operation** | Simple transaction model, appropriate for current use case |
+| **Leverage model's update()** | Preserves password hashing and other model-specific logic |
+
+### Key Challenges & Solutions
+
+#### Challenge 1: Circular Import
+**Problem**: `SQLAlchemyRepository` needs `db`, but `db` is in `app/__init__.py` which imports models.
+
+**Solution**:
+```python
+from app import db  # Works because db is initialized before models are imported
+```
+
+This works because:
+1. `app/__init__.py` creates `db = SQLAlchemy()` early
+2. Model imports happen after db creation
+3. `db.init_app(app)` happens in `create_app()` function
+
+#### Challenge 2: Testing Limitation
+**Issue**: Models not yet mapped to database tables (Task 6 requirement).
+
+**Impact**: Cannot fully test database operations at this stage.
+
+**Documentation Note**: Task instructions explicitly state:
+> "Since the models have not been mapped yet, you will not be able to fully test or initialize the database at this stage."
+
+Full testing deferred to Task 6 (User Mapping).
+
+### Implementation Checklist
+
+✅ **Dependencies**:
+- [x] `flask-sqlalchemy` added to requirements.txt
+- [x] `sqlalchemy` added to requirements.txt
+
+✅ **Configuration**:
+- [x] SQLAlchemy settings in `config.py`
+- [x] `SQLALCHEMY_DATABASE_URI` configured for development
+- [x] `SQLALCHEMY_TRACK_MODIFICATIONS = False` (performance)
+
+✅ **Initialization**:
+- [x] `db = SQLAlchemy()` in `app/__init__.py`
+- [x] `db.init_app(app)` in `create_app()` function
+
+✅ **Repository Implementation**:
+- [x] `SQLAlchemyRepository` class created
+- [x] All 6 Repository interface methods implemented
+- [x] Proper imports (`from app import db`)
+- [x] Transaction management (commit after modifications)
+
+✅ **Integration**:
+- [x] Facade updated to use `SQLAlchemyRepository(User)`
+- [x] Other repositories remain as `InMemoryRepository()`
+
+### Code Quality
+
+✅ **Documentation**: Comprehensive docstrings for all methods
+✅ **Type Hints**: Clear parameter documentation in docstrings
+✅ **Error Handling**: Graceful handling of None cases
+✅ **Consistency**: Follows established patterns from InMemoryRepository
+✅ **Extensibility**: Generic model parameter for reuse
+✅ **Separation of Concerns**: No business logic in repository layer
+
+### Testing Strategy (Deferred to Task 6)
+
+**Current Limitation**: User model not yet mapped to database tables.
+
+**Next Steps**:
+1. Task 6: Map User model to database table using SQLAlchemy decorators
+2. Create database tables with `db.create_all()`
+3. Test full CRUD operations with actual database
+4. Verify admin user seeding with database persistence
+
+**Expected Tests** (once models are mapped):
+- ✅ User creation persists to database
+- ✅ User retrieval by ID
+- ✅ User retrieval by email
+- ✅ User update (including password hashing)
+- ✅ User deletion
+- ✅ Admin user seeding on app startup
+- ✅ Multiple app restarts (idempotent seeding)
+
+### Best Practices Applied
+
+| Practice | Implementation |
+|----------|----------------|
+| **Abstraction** | Repository pattern hides storage implementation |
+| **DRY** | Generic SQLAlchemyRepository works for any model |
+| **SOLID** | Single responsibility, Open/Closed principle |
+| **Separation of Concerns** | Storage logic separate from business logic |
+| **Progressive Enhancement** | Gradual migration reduces risk |
+| **Configuration Management** | Database settings in config, not hardcoded |
+
+### Lessons Learned
+
+1. **Repository Pattern Power**: Same interface, different storage backends (swappable)
+2. **Gradual Migration**: Migrate one entity at a time (reduces complexity)
+3. **Import Order Matters**: `from app import db` works because of initialization order
+4. **Model Update Methods**: Leveraging `obj.update(data)` preserves model-specific logic
+5. **Test-Driven Development**: Sometimes implementation must precede testing (database mapping required first)
+
+### Next Steps (Task 6)
+
+1. Add SQLAlchemy mappings to User model
+2. Create database tables with `db.create_all()`
+3. Test database operations end-to-end
+4. Verify admin seeding with persistent storage
+5. Prepare for mapping other models (Place, Review, Amenity)
+
+---
+
 ## 📊 Summary Statistics
 
 | Metric | Count |
 |--------|-------|
-| Total Issues | 5 |
+| Total Issues | 6 |
 | Critical | 1 |
 | High Severity | 3 |
-| Medium Severity | 1 |
-| Resolved | 5 |
+| Medium Severity | 2 |
+| Resolved | 6 |
 | Open | 0 |
 
 ### Issues by Category
 
-- 🔒 **Security**: 3 issues (60%)
-- 🏗️ **Architecture**: 1 issue (20%)
-- 🧪 **Testing**: 1 issue (20%)
+- 🏗️ **Architecture**: 3 issues (50%)
+- 🔒 **Security**: 2 issues (33%)
+- 🧪 **Testing**: 1 issue (17%)
 
 ### Resolution Time
 

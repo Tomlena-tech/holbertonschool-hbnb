@@ -593,3 +593,7 @@ The Application Factory pattern with configuration management provides:
 - ✅ Admin seeding configured
 
 This foundational pattern enables scalable, maintainable, and secure Flask application development across all environments.
+
+---
+
+**Next**: [Task 1: Password Hashing with Bcrypt](TASK_01.md)

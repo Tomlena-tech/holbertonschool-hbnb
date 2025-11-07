@@ -12,7 +12,8 @@ docs/
     ├── TASK_01.md              # Password Hashing with Bcrypt
     ├── TASK_02.md              # JWT Authentication
     ├── TASK_03.md              # Authenticated User Access
-    └── TASK_04.md              # Administrator Access Control
+    ├── TASK_04.md              # Administrator Access Control
+    └── TASK_05.md              # Database Repository Implementation
 ```
 
 ---
@@ -121,6 +122,27 @@ docs/
 
 ---
 
+### [Task 5: Database Repository Implementation](tasks/TASK_05.md)
+**Objective**: Replace in-memory storage with SQLAlchemy-based persistent storage
+
+**Topics Covered**:
+- ✅ Repository Pattern implementation
+- ✅ SQLAlchemy ORM integration
+- ✅ Database configuration management
+- ✅ Generic repository implementation
+- ✅ Gradual migration strategy
+
+**Key Features**:
+- SQLAlchemy database persistence
+- Generic `SQLAlchemyRepository` class
+- Maintains existing repository interface
+- User model database migration
+- Transaction management with auto-commit
+
+**Status**: ✅ Completed
+
+---
+
 ## 🎯 Quick Start Guide
 
 ### For New Developers
@@ -129,7 +151,8 @@ docs/
 2. **Move to Task 1** to learn about password security
 3. **Continue to Task 2** for authentication basics
 4. **Study Task 3** to understand authorization patterns
-5. **Finish with Task 4** for admin access control
+5. **Review Task 4** for admin access control
+6. **Complete Task 5** for database persistence
 
 ### For Security Auditors
 
@@ -153,6 +176,7 @@ docs/
 | **Flask** | Web framework | [Task 0](tasks/TASK_00.md) |
 | **Flask-Bcrypt** | Password hashing | [Task 1](tasks/TASK_01.md) |
 | **Flask-JWT-Extended** | JWT authentication | [Task 2](tasks/TASK_02.md) |
+| **Flask-SQLAlchemy** | Database ORM | [Task 5](tasks/TASK_05.md) |
 | **Flask-RESTX** | API framework | All tasks |
 
 ---
@@ -458,7 +482,7 @@ TASK_XX.md where XX is the task number (00-10)
 - [x] Task 2: JWT Authentication
 - [x] Task 3: Authenticated User Access Endpoints
 - [x] Task 4: Administrator Access Control
-- [ ] Task 5: Database Repository Implementation
+- [x] Task 5: Database Repository Implementation
 - [ ] Task 6: User Database Mapping
 - [ ] Task 7: Additional Model Mappings
 - [ ] Task 8: Database Relations
@@ -475,4 +499,4 @@ This documentation is part of the HBnB project for educational purposes.
 
 **Last Updated**: November 2025
 **Maintained by**: HBnB Development Team
-**Status**: Active Development - Part 3 (Tasks 0-4 Complete)
+**Status**: Active Development - Part 3 (Tasks 0-5 Complete)

@@ -1,4 +1,4 @@
-from app.persistence.repository import InMemoryRepository
+from app.persistence.repository import InMemoryRepository, SQLAlchemyRepository
 from app.models.user import User
 from app.models.amenity import Amenity
 from app.models.place import Place
@@ -15,10 +15,12 @@ class HBnBFacade:
     def __init__(self):
 
         """
-        Initialise les différents dépôts en mémoire.
+        Initialise les différents dépôts.
+        User repository uses SQLAlchemy for database persistence,
+        others use in-memory storage.
         """
 
-        self.user_repo = InMemoryRepository()
+        self.user_repo = SQLAlchemyRepository(User)
         self.place_repo = InMemoryRepository()
         self.review_repo = InMemoryRepository()
         self.amenity_repo = InMemoryRepository()
