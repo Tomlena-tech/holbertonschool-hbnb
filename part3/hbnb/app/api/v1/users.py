@@ -18,6 +18,7 @@ class UserList(Resource):
     @api.expect(user_model, validate=True)
     @api.response(201, 'User successfully created')
     @api.response(400, 'Email already registered')
+    @api.response(400, 'Invalid input data')
     @api.response(403, 'Admin privileges required')
     @jwt_required()
     def post(self):
@@ -33,8 +34,12 @@ class UserList(Resource):
         existing_user = facade.get_user_by_email(user_data['email'])
         if existing_user:
             return {'error': 'Email already registered'}, 400
+        
+        try:
+            new_user = facade.create_user(user_data)
+        except Exception as e:
+            return {'error': str(e)}, 400
 
-        new_user = facade.create_user(user_data)
         return {
             'id': new_user.id,
             'first_name': new_user.first_name,
