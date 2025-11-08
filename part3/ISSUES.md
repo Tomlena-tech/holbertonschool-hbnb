@@ -17,6 +17,8 @@ This document tracks all issues encountered during development, their root cause
 - [Issue #5: Plain Text Password Storage Vulnerability](#issue-5-plain-text-password-storage-vulnerability-critical)
 - [Issue #6: Database Repository Implementation](#issue-6-database-repository-implementation)
 - [Issue #7: User Database Mapping with SQLAlchemy](#issue-7-user-database-mapping-with-sqlalchemy)
+- [Issue #8: Database Mapping for Place, Review, and Amenity Models](#issue-8-database-mapping-for-place-review-and-amenity-models)
+- [Issue #9: Entity Relationships with SQLAlchemy](#issue-9-entity-relationships-with-sqlalchemy)
 
 ---
 
