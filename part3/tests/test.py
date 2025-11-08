@@ -32,6 +32,12 @@ Test Coverage:
         - Review model mapping and table creation
         - Column constraints validation
         - Property validation preservation
+    - Task 8: Entity Relationships with SQLAlchemy
+        - Association table creation (Place-Amenity)
+        - Foreign key constraints validation
+        - Bidirectional relationships testing
+        - Many-to-many relationship testing
+        - Unique constraint enforcement
 """
 
 import sys
@@ -1981,6 +1987,483 @@ def test_7_6_property_validation_preserved():
 
 
 # ============================================================================
+# TASK 8: ENTITY RELATIONSHIPS WITH SQLALCHEMY
+# ============================================================================
+def test_task_8():
+    """Test suite for Task 8: SQLAlchemy relationships between entities."""
+    print_section("TASK 8: ENTITY RELATIONSHIPS WITH SQLALCHEMY")
+
+    test_8_1_association_table_created()
+    test_8_2_foreign_keys_added()
+    test_8_3_place_user_relationship()
+    test_8_4_review_relationships()
+    test_8_5_place_amenity_relationship()
+    test_8_6_unique_constraints()
+
+
+# 8.1: Association Table Created
+def test_8_1_association_table_created():
+    """Test that place_amenity association table was created."""
+    print_subsection("Test 8.1: Association Table Created")
+
+    with app.app_context():
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+
+        runner.assert_true(
+            'place_amenity' in tables,
+            "Place-Amenity association table created",
+            "Table 'place_amenity' found in database",
+            "Table 'place_amenity' not found"
+        )
+
+        # Check association table columns
+        if 'place_amenity' in tables:
+            columns = {col['name'] for col in inspector.get_columns('place_amenity')}
+
+            runner.assert_true(
+                'place_id' in columns and 'amenity_id' in columns,
+                "Association table has required columns",
+                "Columns 'place_id' and 'amenity_id' found",
+                f"Missing columns. Found: {columns}"
+            )
+
+            # Check foreign keys
+            fks = inspector.get_foreign_keys('place_amenity')
+            fk_tables = {fk['referred_table'] for fk in fks}
+
+            runner.assert_true(
+                'places' in fk_tables and 'amenities' in fk_tables,
+                "Association table foreign keys configured",
+                "Foreign keys to 'places' and 'amenities' tables found",
+                f"Foreign key tables: {fk_tables}"
+            )
+
+
+# 8.2: Foreign Keys Added
+def test_8_2_foreign_keys_added():
+    """Test that foreign keys were added to Place and Review models."""
+    print_subsection("Test 8.2: Foreign Keys Added")
+
+    with app.app_context():
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+
+        # Check Place model foreign keys
+        place_columns = {col['name'] for col in inspector.get_columns('places')}
+        runner.assert_true(
+            'owner_id' in place_columns,
+            "Place model has owner_id foreign key",
+            "Column 'owner_id' found in places table",
+            "Column 'owner_id' not found"
+        )
+
+        place_fks = inspector.get_foreign_keys('places')
+        place_fk_tables = {fk['referred_table'] for fk in place_fks}
+        runner.assert_true(
+            'users' in place_fk_tables,
+            "Place.owner_id references users table",
+            "Foreign key to 'users' table found",
+            f"Foreign key tables: {place_fk_tables}"
+        )
+
+        # Check Review model foreign keys
+        review_columns = {col['name'] for col in inspector.get_columns('reviews')}
+        runner.assert_true(
+            'user_id' in review_columns and 'place_id' in review_columns,
+            "Review model has user_id and place_id foreign keys",
+            "Columns 'user_id' and 'place_id' found in reviews table",
+            f"Found columns: {review_columns}"
+        )
+
+        review_fks = inspector.get_foreign_keys('reviews')
+        review_fk_tables = {fk['referred_table'] for fk in review_fks}
+        runner.assert_true(
+            'users' in review_fk_tables and 'places' in review_fk_tables,
+            "Review foreign keys reference correct tables",
+            "Foreign keys to 'users' and 'places' tables found",
+            f"Foreign key tables: {review_fk_tables}"
+        )
+
+
+# 8.3: Place-User Relationship
+def test_8_3_place_user_relationship():
+    """Test bidirectional Place-User relationship."""
+    print_subsection("Test 8.3: Place-User Relationship")
+
+    with app.app_context():
+        # Create a test user
+        test_user = User(
+            first_name="John",
+            last_name="Doe",
+            email="john.place@test.com",
+            password="password123"
+        )
+        db.session.add(test_user)
+        db.session.commit()
+
+        # Create a place owned by the user
+        test_place = Place(
+            title="Test House",
+            price=100.0,
+            latitude=45.0,
+            longitude=-75.0,
+            owner=test_user
+        )
+        db.session.add(test_place)
+        db.session.commit()
+
+        # Test forward relationship (Place -> User)
+        runner.assert_true(
+            test_place.owner is not None,
+            "Place.owner relationship works",
+            f"Place owner is {test_place.owner.email}",
+            "Place.owner is None"
+        )
+
+        runner.assert_equal(
+            test_place.owner.email,
+            "john.place@test.com",
+            "Place.owner returns correct user",
+            ""
+        )
+
+        runner.assert_equal(
+            test_place.owner_id,
+            test_user.id,
+            "Place.owner_id set correctly",
+            ""
+        )
+
+        # Test backward relationship (User -> Places)
+        runner.assert_true(
+            hasattr(test_user, 'owned_places'),
+            "User.owned_places backref exists",
+            "User has 'owned_places' attribute",
+            "User.owned_places attribute not found"
+        )
+
+        runner.assert_true(
+            len(test_user.owned_places) > 0,
+            "User.owned_places returns places",
+            f"User owns {len(test_user.owned_places)} place(s)",
+            "User.owned_places is empty"
+        )
+
+        runner.assert_equal(
+            test_user.owned_places[0].title,
+            "Test House",
+            "User.owned_places contains correct place",
+            ""
+        )
+
+        # Cleanup
+        db.session.delete(test_place)
+        db.session.delete(test_user)
+        db.session.commit()
+
+
+# 8.4: Review Relationships
+def test_8_4_review_relationships():
+    """Test bidirectional Review relationships with User and Place."""
+    print_subsection("Test 8.4: Review Relationships")
+
+    with app.app_context():
+        # Create test user and place
+        review_user = User(
+            first_name="Jane",
+            last_name="Smith",
+            email="jane.review@test.com",
+            password="password123"
+        )
+        place_owner = User(
+            first_name="Bob",
+            last_name="Owner",
+            email="bob.owner@test.com",
+            password="password123"
+        )
+        db.session.add(review_user)
+        db.session.add(place_owner)
+        db.session.commit()
+
+        review_place = Place(
+            title="Review Test Place",
+            price=150.0,
+            latitude=40.0,
+            longitude=-70.0,
+            owner=place_owner
+        )
+        db.session.add(review_place)
+        db.session.commit()
+
+        # Create a review
+        test_review = Review(
+            text="Great place!",
+            rating=5,
+            place=review_place,
+            user=review_user
+        )
+        db.session.add(test_review)
+        db.session.commit()
+
+        # Test Review -> User relationship
+        runner.assert_true(
+            test_review.user is not None,
+            "Review.user relationship works",
+            f"Review user is {test_review.user.email}",
+            "Review.user is None"
+        )
+
+        runner.assert_equal(
+            test_review.user.email,
+            "jane.review@test.com",
+            "Review.user returns correct user",
+            ""
+        )
+
+        # Test Review -> Place relationship
+        runner.assert_true(
+            test_review.place is not None,
+            "Review.place relationship works",
+            f"Review place is {test_review.place.title}",
+            "Review.place is None"
+        )
+
+        runner.assert_equal(
+            test_review.place.title,
+            "Review Test Place",
+            "Review.place returns correct place",
+            ""
+        )
+
+        # Test User -> Reviews backref
+        runner.assert_true(
+            hasattr(review_user, 'user_reviews'),
+            "User.user_reviews backref exists",
+            "User has 'user_reviews' attribute",
+            "User.user_reviews not found"
+        )
+
+        runner.assert_true(
+            len(review_user.user_reviews) > 0,
+            "User.user_reviews returns reviews",
+            f"User has {len(review_user.user_reviews)} review(s)",
+            "User.user_reviews is empty"
+        )
+
+        # Test Place -> Reviews backref
+        runner.assert_true(
+            hasattr(review_place, 'reviews'),
+            "Place.reviews backref exists",
+            "Place has 'reviews' attribute",
+            "Place.reviews not found"
+        )
+
+        runner.assert_true(
+            len(review_place.reviews) > 0,
+            "Place.reviews returns reviews",
+            f"Place has {len(review_place.reviews)} review(s)",
+            "Place.reviews is empty"
+        )
+
+        runner.assert_equal(
+            review_place.reviews[0].text,
+            "Great place!",
+            "Place.reviews contains correct review",
+            ""
+        )
+
+        # Cleanup
+        db.session.delete(test_review)
+        db.session.delete(review_place)
+        db.session.delete(review_user)
+        db.session.delete(place_owner)
+        db.session.commit()
+
+
+# 8.5: Place-Amenity Relationship
+def test_8_5_place_amenity_relationship():
+    """Test many-to-many Place-Amenity relationship."""
+    print_subsection("Test 8.5: Place-Amenity Relationship")
+
+    with app.app_context():
+        # Create test user and place
+        amenity_owner = User(
+            first_name="Alice",
+            last_name="Test",
+            email="alice.amenity@test.com",
+            password="password123"
+        )
+        db.session.add(amenity_owner)
+        db.session.commit()
+
+        amenity_place = Place(
+            title="Amenity Test Place",
+            price=200.0,
+            latitude=35.0,
+            longitude=-80.0,
+            owner=amenity_owner
+        )
+        db.session.add(amenity_place)
+        db.session.commit()
+
+        # Create amenities
+        wifi = Amenity(name="WiFi-Test")
+        pool = Amenity(name="Pool-Test")
+        db.session.add(wifi)
+        db.session.add(pool)
+        db.session.commit()
+
+        # Add amenities to place
+        amenity_place.amenities_rel.append(wifi)
+        amenity_place.amenities_rel.append(pool)
+        db.session.commit()
+
+        # Test Place -> Amenities relationship
+        runner.assert_true(
+            hasattr(amenity_place, 'amenities_rel'),
+            "Place.amenities_rel relationship exists",
+            "Place has 'amenities_rel' attribute",
+            "Place.amenities_rel not found"
+        )
+
+        runner.assert_equal(
+            len(amenity_place.amenities_rel),
+            2,
+            "Place.amenities_rel returns correct count",
+            f"- Expected 2, got {len(amenity_place.amenities_rel)}"
+        )
+
+        amenity_names = {a.name for a in amenity_place.amenities_rel}
+        runner.assert_true(
+            "WiFi-Test" in amenity_names and "Pool-Test" in amenity_names,
+            "Place.amenities_rel contains correct amenities",
+            f"Amenities: {amenity_names}",
+            f"Found: {amenity_names}"
+        )
+
+        # Test Amenity -> Places backref
+        runner.assert_true(
+            hasattr(wifi, 'places_list'),
+            "Amenity.places_list backref exists",
+            "Amenity has 'places_list' attribute",
+            "Amenity.places_list not found"
+        )
+
+        runner.assert_true(
+            len(wifi.places_list) > 0,
+            "Amenity.places_list returns places",
+            f"Amenity linked to {len(wifi.places_list)} place(s)",
+            "Amenity.places_list is empty"
+        )
+
+        runner.assert_equal(
+            wifi.places_list[0].title,
+            "Amenity Test Place",
+            "Amenity.places_list contains correct place",
+            ""
+        )
+
+        # Cleanup
+        db.session.delete(amenity_place)
+        db.session.delete(wifi)
+        db.session.delete(pool)
+        db.session.delete(amenity_owner)
+        db.session.commit()
+
+
+# 8.6: Unique Constraints
+def test_8_6_unique_constraints():
+    """Test unique constraint on (user_id, place_id) in reviews."""
+    print_subsection("Test 8.6: Unique Constraints")
+
+    with app.app_context():
+        # Create test data
+        constraint_user = User(
+            first_name="Test",
+            last_name="User",
+            email="test.constraint@test.com",
+            password="password123"
+        )
+        constraint_owner = User(
+            first_name="Owner",
+            last_name="Test",
+            email="owner.constraint@test.com",
+            password="password123"
+        )
+        db.session.add(constraint_user)
+        db.session.add(constraint_owner)
+        db.session.commit()
+
+        constraint_place = Place(
+            title="Constraint Test",
+            price=100.0,
+            latitude=30.0,
+            longitude=-90.0,
+            owner=constraint_owner
+        )
+        db.session.add(constraint_place)
+        db.session.commit()
+
+        # Create first review
+        review1 = Review(
+            text="First review",
+            rating=4,
+            place=constraint_place,
+            user=constraint_user
+        )
+        db.session.add(review1)
+        db.session.commit()
+
+        runner.assert_true(
+            True,
+            "First review created successfully",
+            "Review added to database",
+            ""
+        )
+
+        # Try to create duplicate review (should fail)
+        try:
+            review2 = Review(
+                text="Duplicate review",
+                rating=5,
+                place=constraint_place,
+                user=constraint_user
+            )
+            db.session.add(review2)
+            db.session.commit()
+
+            runner.assert_true(
+                False,
+                "Unique constraint prevents duplicate reviews",
+                "",
+                "Duplicate review was allowed (should have been rejected)"
+            )
+        except Exception as e:
+            db.session.rollback()
+            error_msg = str(e).lower()
+            is_unique_violation = (
+                'unique' in error_msg or
+                'constraint' in error_msg or
+                'duplicate' in error_msg
+            )
+            runner.assert_true(
+                is_unique_violation,
+                "Unique constraint prevents duplicate reviews",
+                "Duplicate review correctly rejected by database",
+                f"Error: {e}"
+            )
+
+        # Cleanup
+        db.session.delete(review1)
+        db.session.delete(constraint_place)
+        db.session.delete(constraint_user)
+        db.session.delete(constraint_owner)
+        db.session.commit()
+
+
+# ============================================================================
 # MAIN TEST EXECUTION
 # ============================================================================
 if __name__ == "__main__":
@@ -2009,6 +2492,9 @@ if __name__ == "__main__":
 
     # Task 7: Place, Review, and Amenity Database Mapping (includes all subtasks)
     test_task_7()
+
+    # Task 8: Entity Relationships with SQLAlchemy (includes all subtasks)
+    test_task_8()
 
     # Print summary
     runner.print_summary()
