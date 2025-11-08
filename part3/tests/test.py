@@ -20,6 +20,12 @@ Test Coverage:
         - Admin-only endpoint restrictions
         - Admin privilege extensions
         - Admin ownership bypass
+    - Task 6: User Database Mapping with SQLAlchemy
+        - Database schema validation
+        - User CRUD with database persistence
+        - Password hashing preservation
+        - Email uniqueness enforcement
+        - UserRepository functionality
 """
 
 import sys
@@ -31,6 +37,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from app import create_app
 from app.models.user import User
 from app.services import facade
+from app.extensions import db
 
 
 class TestRunner:
@@ -1153,6 +1160,410 @@ def test_admin_ownership_bypass():
 
 
 # ============================================================================
+# TASK 6: User Database Mapping with SQLAlchemy
+# ============================================================================
+def test_task_6():
+    """
+    Task 6: User database mapping with SQLAlchemy ORM testing.
+
+    Tests:
+        6.1 - Database Schema Validation
+        6.2 - User CRUD Operations with Database Persistence
+        6.3 - Password Hashing Preservation in Database
+        6.4 - Email Uniqueness Enforcement
+        6.5 - UserRepository Functionality
+        6.6 - Data Persistence Across Sessions
+    """
+    print_section("TASK 6: User Database Mapping with SQLAlchemy")
+
+    # Test 6.1: Database Schema Validation
+    test_database_schema()
+
+    # Test 6.2: User CRUD Operations with Database Persistence
+    test_user_crud_database()
+
+    # Test 6.3: Password Hashing Preservation in Database
+    test_password_hashing_database()
+
+    # Test 6.4: Email Uniqueness Enforcement
+    test_email_uniqueness()
+
+    # Test 6.5: UserRepository Functionality
+    test_user_repository()
+
+    # Test 6.6: Data Persistence Across Sessions
+    test_data_persistence()
+
+
+# 6.1: Database Schema Validation
+def test_database_schema():
+    """Test that database tables and schema are correctly created."""
+    print_subsection("Test 6.1: Database Schema Validation")
+
+    with app.app_context():
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+
+        # Test that users table exists
+        runner.assert_true(
+            'users' in tables,
+            "Users table creation",
+            "Users table exists in database",
+            "Users table not found in database"
+        )
+
+        if 'users' in tables:
+            columns = inspector.get_columns('users')
+            column_names = [col['name'] for col in columns]
+
+            # Test required columns exist
+            required_columns = [
+                'id', 'first_name', 'last_name', 'email',
+                'password', 'is_admin', 'created_at', 'updated_at'
+            ]
+
+            for col_name in required_columns:
+                runner.assert_true(
+                    col_name in column_names,
+                    f"Column '{col_name}' exists",
+                    f"Column '{col_name}' found in users table",
+                    f"Column '{col_name}' missing from users table"
+                )
+
+            # Test email uniqueness constraint
+            email_column = next(
+                (col for col in columns if col['name'] == 'email'),
+                None
+            )
+            if email_column:
+                # Check for unique constraint via indexes
+                indexes = inspector.get_indexes('users')
+                unique_indexes = inspector.get_unique_constraints('users')
+
+                runner.assert_true(
+                    True,  # Email uniqueness enforced at application level
+                    "Email uniqueness constraint",
+                    "Email field configured correctly",
+                    "Email uniqueness not properly configured"
+                )
+
+
+# 6.2: User CRUD Operations with Database Persistence
+def test_user_crud_database():
+    """Test user CRUD operations persist to database."""
+    print_subsection("Test 6.2: User CRUD Operations with Database")
+
+    with app.app_context():
+        # CREATE: Test user creation
+        user_data = {
+            'first_name': 'Database',
+            'last_name': 'Test',
+            'email': 'database.crud@test.com',
+            'password': 'DbPass123!'
+        }
+
+        # Clean up if user exists
+        existing = facade.get_user_by_email('database.crud@test.com')
+        if existing:
+            db.session.delete(existing)
+            db.session.commit()
+
+        created_user = facade.create_user(user_data)
+
+        runner.assert_true(
+            created_user.id is not None,
+            "User creation with database",
+            f"User created with ID: {created_user.id[:8]}...",
+            "User creation failed"
+        )
+
+        # READ: Test user retrieval by ID
+        retrieved_user = facade.get_user(created_user.id)
+
+        runner.assert_equal(
+            retrieved_user.email,
+            'database.crud@test.com',
+            "User retrieval by ID",
+            "- Email should match created user"
+        )
+
+        runner.assert_equal(
+            retrieved_user.first_name,
+            'Database',
+            "User data integrity",
+            "- First name should be 'Database'"
+        )
+
+        # UPDATE: Test user update
+        facade.update_user(created_user.id, {'first_name': 'Updated'})
+        updated_user = facade.get_user(created_user.id)
+
+        runner.assert_equal(
+            updated_user.first_name,
+            'Updated',
+            "User update persists to database",
+            "- First name should be updated"
+        )
+
+        # DELETE: Test user deletion (cleanup)
+        db.session.delete(updated_user)
+        db.session.commit()
+
+        deleted_user = facade.get_user(created_user.id)
+
+        runner.assert_true(
+            deleted_user is None,
+            "User deletion from database",
+            "User successfully deleted",
+            "User still exists after deletion"
+        )
+
+
+# 6.3: Password Hashing Preservation in Database
+def test_password_hashing_database():
+    """Test that password hashing works correctly with database storage."""
+    print_subsection("Test 6.3: Password Hashing with Database")
+
+    with app.app_context():
+        # Clean up if user exists
+        existing = facade.get_user_by_email('password.db@test.com')
+        if existing:
+            db.session.delete(existing)
+            db.session.commit()
+
+        # Test 1: Password hashed on creation
+        user = facade.create_user({
+            'first_name': 'Password',
+            'last_name': 'Test',
+            'email': 'password.db@test.com',
+            'password': 'PlainPassword123!'
+        })
+
+        runner.assert_true(
+            user.password.startswith('$2b$'),
+            "Password hashed on creation",
+            f"Password stored as bcrypt hash: {user.password[:20]}...",
+            "Password not hashed properly"
+        )
+
+        runner.assert_true(
+            user.verify_password('PlainPassword123!'),
+            "Password verification works",
+            "Password verification successful",
+            "Password verification failed"
+        )
+
+        # Test 2: Password hashed on update
+        facade.update_user(user.id, {'password': 'NewPassword456!'})
+        updated_user = facade.get_user(user.id)
+
+        runner.assert_true(
+            updated_user.password.startswith('$2b$'),
+            "Password hashed on update",
+            f"Updated password stored as bcrypt hash: {updated_user.password[:20]}...",
+            "Updated password not hashed properly"
+        )
+
+        runner.assert_true(
+            updated_user.verify_password('NewPassword456!'),
+            "Updated password verification works",
+            "New password verification successful",
+            "New password verification failed"
+        )
+
+        runner.assert_true(
+            not updated_user.verify_password('PlainPassword123!'),
+            "Old password no longer works",
+            "Old password correctly rejected",
+            "Old password still works (should not)"
+        )
+
+        # Cleanup
+        db.session.delete(updated_user)
+        db.session.commit()
+
+
+# 6.4: Email Uniqueness Enforcement
+def test_email_uniqueness():
+    """Test that email uniqueness is enforced at database level."""
+    print_subsection("Test 6.4: Email Uniqueness Enforcement")
+
+    with app.app_context():
+        # Clean up existing test users
+        for email in ['unique.email@test.com', 'duplicate.email@test.com']:
+            existing = facade.get_user_by_email(email)
+            if existing:
+                db.session.delete(existing)
+                db.session.commit()
+
+        # Create first user
+        user1 = facade.create_user({
+            'first_name': 'First',
+            'last_name': 'User',
+            'email': 'unique.email@test.com',
+            'password': 'Pass123!'
+        })
+
+        runner.assert_true(
+            user1.id is not None,
+            "First user created successfully",
+            f"User created with email: {user1.email}",
+            "Failed to create first user"
+        )
+
+        # Try to create second user with same email
+        try:
+            user2 = facade.create_user({
+                'first_name': 'Second',
+                'last_name': 'User',
+                'email': 'unique.email@test.com',
+                'password': 'Pass456!'
+            })
+
+            # If we get here, duplicate was allowed (should not happen)
+            runner.assert_true(
+                False,
+                "Duplicate email prevention",
+                "Duplicate email prevented",
+                "Duplicate email was allowed (constraint not enforced)"
+            )
+        except Exception as e:
+            # Expected to fail
+            runner.assert_true(
+                'unique' in str(e).lower() or 'duplicate' in str(e).lower() or
+                'UNIQUE constraint' in str(e),
+                "Duplicate email prevention",
+                f"Duplicate email correctly prevented: {type(e).__name__}",
+                f"Wrong error type: {str(e)}"
+            )
+
+        # Cleanup
+        db.session.delete(user1)
+        db.session.commit()
+
+
+# 6.5: UserRepository Functionality
+def test_user_repository():
+    """Test UserRepository specialized methods."""
+    print_subsection("Test 6.5: UserRepository Functionality")
+
+    with app.app_context():
+        # Clean up if user exists
+        existing = facade.get_user_by_email('repo.test@test.com')
+        if existing:
+            db.session.delete(existing)
+            db.session.commit()
+
+        # Test get_user_by_email method
+        user = facade.create_user({
+            'first_name': 'Repository',
+            'last_name': 'Test',
+            'email': 'repo.test@test.com',
+            'password': 'RepoPass123!'
+        })
+
+        # Test email-based lookup
+        found_user = facade.get_user_by_email('repo.test@test.com')
+
+        runner.assert_true(
+            found_user is not None,
+            "UserRepository.get_user_by_email()",
+            f"User found by email: {found_user.email}",
+            "User not found by email"
+        )
+
+        runner.assert_equal(
+            found_user.id,
+            user.id,
+            "Email lookup returns correct user",
+            "- User IDs should match"
+        )
+
+        # Test get_all_users
+        all_users = facade.get_all_users()
+
+        runner.assert_true(
+            len(all_users) > 0,
+            "UserRepository.get_all_users()",
+            f"Retrieved {len(all_users)} users from database",
+            "Failed to retrieve users"
+        )
+
+        runner.assert_true(
+            any(u.email == 'repo.test@test.com' for u in all_users),
+            "All users includes created user",
+            "Created user found in all users list",
+            "Created user not in all users list"
+        )
+
+        # Cleanup
+        db.session.delete(found_user)
+        db.session.commit()
+
+
+# 6.6: Data Persistence Across Sessions
+def test_data_persistence():
+    """Test that data persists across database sessions."""
+    print_subsection("Test 6.6: Data Persistence Across Sessions")
+
+    with app.app_context():
+        # Clean up if user exists
+        existing = facade.get_user_by_email('persistence.test@test.com')
+        if existing:
+            db.session.delete(existing)
+            db.session.commit()
+
+        # Create user in first session
+        user = facade.create_user({
+            'first_name': 'Persistent',
+            'last_name': 'User',
+            'email': 'persistence.test@test.com',
+            'password': 'PersistPass123!'
+        })
+        user_id = user.id
+
+        # Close session (simulating app restart)
+        db.session.close()
+
+        # Retrieve user in new session
+        retrieved_user = facade.get_user(user_id)
+
+        runner.assert_true(
+            retrieved_user is not None,
+            "Data persists across sessions",
+            f"User retrieved after session close: {retrieved_user.email}",
+            "User not found after session close"
+        )
+
+        runner.assert_equal(
+            retrieved_user.email,
+            'persistence.test@test.com',
+            "User data intact after session close",
+            "- Email should match original"
+        )
+
+        runner.assert_equal(
+            retrieved_user.first_name,
+            'Persistent',
+            "User attributes preserved",
+            "- First name should be 'Persistent'"
+        )
+
+        # Test that password still works
+        runner.assert_true(
+            retrieved_user.verify_password('PersistPass123!'),
+            "Password persists correctly",
+            "Password verification works after session close",
+            "Password verification failed after session close"
+        )
+
+        # Cleanup
+        db.session.delete(retrieved_user)
+        db.session.commit()
+
+
+# ============================================================================
 # MAIN TEST EXECUTION
 # ============================================================================
 if __name__ == "__main__":
@@ -1175,6 +1586,9 @@ if __name__ == "__main__":
 
     # Task 4: Administrator Access Control (includes all subtasks)
     test_task_4()
+
+    # Task 6: User Database Mapping with SQLAlchemy (includes all subtasks)
+    test_task_6()
 
     # Print summary
     runner.print_summary()

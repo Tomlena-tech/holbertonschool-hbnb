@@ -16,6 +16,7 @@ This document tracks all issues encountered during development, their root cause
 - [Issue #4: ModuleNotFoundError in Test Suite](#issue-4-modulenotfounderror-in-test-suite)
 - [Issue #5: Plain Text Password Storage Vulnerability](#issue-5-plain-text-password-storage-vulnerability-critical)
 - [Issue #6: Database Repository Implementation](#issue-6-database-repository-implementation)
+- [Issue #7: User Database Mapping with SQLAlchemy](#issue-7-user-database-mapping-with-sqlalchemy)
 
 ---
 
@@ -902,6 +903,321 @@ All issues resolved during development phase (November 2025)
 ### Testing Resources
 - [Python sys.path Documentation](https://docs.python.org/3/library/sys.html#sys.path)
 - [Python unittest Documentation](https://docs.python.org/3/library/unittest.html)
+
+---
+
+## Issue #7: User Database Mapping with SQLAlchemy
+
+**🏷️ Category**: Database | Task 6
+**📅 Date**: November 2025
+**⚡ Severity**: High
+**✅ Status**: Resolved
+
+### Problem Statement
+
+The User model needed to be migrated from in-memory storage to database persistence using SQLAlchemy ORM while maintaining existing property-based validation and password hashing functionality.
+
+**Technical Challenges**:
+1. Circular import issues when importing `db` from `app` module
+2. Property decorators conflicting with SQLAlchemy Column definitions
+3. Ensuring models are registered with SQLAlchemy before `db.create_all()`
+4. Integrating database persistence while preserving existing business logic
+
+### Root Cause Analysis
+
+**Circular Import Problem**:
+```
+app/__init__.py imports API namespaces
+  → API modules import facade
+    → facade imports repository
+      → repository imports db from app
+        → app/__init__.py (circular!)
+```
+
+**Property Conflict**:
+SQLAlchemy Column definitions were being overridden by Python `@property` decorators with the same names, preventing proper database schema creation.
+
+### Solution
+
+Implemented a multi-part solution addressing each technical challenge:
+
+#### 1. Created Extensions Module
+
+**File**: `app/extensions.py`
+```python
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager
+from flask_sqlalchemy import SQLAlchemy
+
+bcrypt = Bcrypt()
+jwt = JWTManager()
+db = SQLAlchemy()
+```
+
+**Benefits**:
+- Breaks circular import by providing a separate import source
+- Extensions can be imported before app creation
+- Clean separation of extension initialization
+
+#### 2. Updated BaseModel with SQLAlchemy Mappings
+
+**File**: `app/models/base_model.py`
+```python
+from app.extensions import db
+
+class BaseModel(db.Model):
+    __abstract__ = True
+
+    id = db.Column(db.String(36), primary_key=True,
+                   default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow,
+                          nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+                          onupdate=datetime.utcnow, nullable=False)
+```
+
+**Key Changes**:
+- Inherit from `db.Model` instead of plain Python class
+- Added `__abstract__ = True` to prevent table creation for BaseModel
+- SQLAlchemy column mappings for common attributes
+
+#### 3. Mapped User Columns to Private Attributes
+
+**File**: `app/models/user.py`
+```python
+class User(BaseModel):
+    __tablename__ = 'users'
+
+    # Column names map to private attributes used by properties
+    _first_name = db.Column('first_name', db.String(50), nullable=False)
+    _last_name = db.Column('last_name', db.String(50), nullable=False)
+    _email = db.Column('email', db.String(120), nullable=False, unique=True)
+    password = db.Column(db.String(128), nullable=False)
+    _User__is_admin = db.Column('is_admin', db.Boolean, default=False,
+                                 nullable=False)
+```
+
+**Strategy**:
+- Column attribute names match internal property storage (`_first_name`, `_email`, etc.)
+- First parameter to `db.Column()` specifies actual database column name
+- Preserves existing property validation logic
+- Maintains compatibility with existing code
+
+#### 4. Created UserRepository
+
+**File**: `app/persistence/user_repository.py`
+```python
+class UserRepository(SQLAlchemyRepository):
+    def __init__(self):
+        super().__init__(User)
+
+    def get_user_by_email(self, email):
+        return self.get_by_attribute('email', email)
+```
+
+**Features**:
+- Extends generic `SQLAlchemyRepository`
+- Adds domain-specific `get_user_by_email()` method
+- Maintains clean separation from business logic
+
+#### 5. Fixed Repository Circular Import
+
+**File**: `app/persistence/repository.py`
+```python
+class SQLAlchemyRepository(Repository):
+    @property
+    def _db(self):
+        """Late import of db to avoid circular imports."""
+        from app.extensions import db
+        return db
+
+    def add(self, obj):
+        self._db.session.add(obj)
+        self._db.session.commit()
+```
+
+**Pattern**: Late import via property ensures `db` is imported only when needed, after app initialization.
+
+#### 6. Updated App Initialization
+
+**File**: `app/__init__.py`
+```python
+def create_app(config_class="config.DevelopmentConfig"):
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+
+    # Initialize extensions
+    db.init_app(app)
+
+    # Import API namespaces (after extensions)
+    from app.api.v1.users import api as users_ns
+    # ... other namespaces
+
+    # Database initialization
+    with app.app_context():
+        from app import models  # Register models with SQLAlchemy
+        db.create_all()  # Create tables
+        seed_admin_user(app)  # Seed admin
+
+    return app
+```
+
+**Order of Operations**:
+1. Initialize extensions with app
+2. Import API namespaces (now safe, extensions exist)
+3. Import models to register with SQLAlchemy
+4. Create database tables
+5. Seed admin user
+
+#### 7. Created Models Package Init
+
+**File**: `app/models/__init__.py`
+```python
+from app.models.user import User
+
+__all__ = ['User']
+```
+
+**Purpose**: Ensures User model is imported when `from app import models` is called.
+
+### Files Modified
+
+1. **app/extensions.py** (NEW)
+   - Centralized extension initialization
+   - Exports `db`, `bcrypt`, `jwt`
+
+2. **app/models/base_model.py**
+   - Changed inheritance to `db.Model`
+   - Added `__abstract__ = True`
+   - Added SQLAlchemy column mappings
+
+3. **app/models/user.py**
+   - Added `__tablename__ = 'users'`
+   - Mapped columns to private attributes
+   - Imported `db` from `app.extensions`
+
+4. **app/persistence/user_repository.py** (NEW)
+   - Created specialized repository for User
+   - Implements `get_user_by_email()`
+
+5. **app/persistence/repository.py**
+   - Removed top-level `db` import
+   - Added `_db` property with late import
+
+6. **app/services/facade.py**
+   - Changed to use `UserRepository()` instead of `SQLAlchemyRepository(User)`
+   - Updated `get_user_by_email()` to use repository method
+
+7. **app/__init__.py**
+   - Imported extensions from `app.extensions`
+   - Moved namespace imports inside `create_app()`
+   - Added model import before `db.create_all()`
+
+8. **app/models/__init__.py** (NEW)
+   - Exports User model
+
+### Database Schema Created
+
+```sql
+CREATE TABLE users (
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(120) NOT NULL,
+    password VARCHAR(128) NOT NULL,
+    is_admin BOOLEAN NOT NULL,
+    id VARCHAR(36) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE (email)
+)
+```
+
+### Testing Performed
+
+✅ **Database Initialization**
+```python
+# Tables created successfully
+Tables: ['amenity', 'place', 'review', 'users']
+
+# Schema verification
+Users columns:
+  first_name      VARCHAR(50)     NOT NULL
+  last_name       VARCHAR(50)     NOT NULL
+  email           VARCHAR(120)    NOT NULL
+  password        VARCHAR(128)    NOT NULL
+  is_admin        BOOLEAN         NOT NULL
+  id              VARCHAR(36)     NOT NULL
+  created_at      DATETIME        NOT NULL
+  updated_at      DATETIME        NOT NULL
+```
+
+✅ **Admin User Seeding**
+```
+Admin user created: admin@hbnb.io
+```
+
+✅ **CRUD Operations**
+- User creation with hashed password
+- User retrieval by ID and email
+- User update preserves password hashing
+- Unique email constraint enforced
+
+### Architectural Benefits
+
+**Clean Separation of Concerns**:
+- Extensions module provides clear dependency injection point
+- Models focus on business logic and validation
+- Repositories handle data persistence
+- No circular dependencies
+
+**Backward Compatibility**:
+- Existing property-based validation preserved
+- Password hashing still works correctly
+- API endpoints unchanged
+- Business logic unaffected
+
+**Scalability**:
+- Pattern reusable for all models (Place, Review, Amenity)
+- Generic repository implementation
+- Database-agnostic (SQLite, PostgreSQL, MySQL)
+
+### Lessons Learned
+
+1. **Circular Imports**: Creating a separate extensions module is a Flask best practice that prevents circular import issues
+2. **SQLAlchemy Column Mapping**: Use first parameter of `db.Column()` to specify database column name when Python attribute name must differ
+3. **Property Integration**: SQLAlchemy columns can coexist with properties if mapped to the same private attributes
+4. **Late Imports**: Property-based late imports provide flexibility for resolving circular dependencies
+5. **Model Registration**: Models must be imported before `db.create_all()` for table creation
+6. **Order Matters**: Extension initialization → Model imports → Table creation → Data seeding
+
+### Code Quality Notes
+
+- ✅ No breaking changes to existing API
+- ✅ All existing tests still pass
+- ✅ Password hashing preserved
+- ✅ Property validation intact
+- ✅ Clean architecture maintained
+- ✅ Production-ready database persistence
+
+### Performance Considerations
+
+- Database queries logged in development mode (`SQLALCHEMY_ECHO = True`)
+- Auto-commit after each operation (acceptable for current scale)
+- Connection pooling handled by SQLAlchemy
+- Consider adding query optimization for production (indexes, eager loading)
+
+### Related Issues
+
+- Builds on [Issue #6: Database Repository Implementation](#issue-6-database-repository-implementation)
+- Addresses Task 6 requirements for User model database mapping
+
+### References
+
+- [Flask-SQLAlchemy Documentation](https://flask-sqlalchemy.palletsprojects.com/)
+- [SQLAlchemy ORM Tutorial](https://docs.sqlalchemy.org/en/20/orm/tutorial.html)
+- [Flask Application Factories](https://flask.palletsprojects.com/en/latest/patterns/appfactories/)
+- [Python Circular Imports](https://stackabuse.com/python-circular-imports/)
 
 ---
 

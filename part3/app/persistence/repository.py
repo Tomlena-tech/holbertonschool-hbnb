@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from app import db
 
 
 class Repository(ABC):
@@ -91,6 +90,12 @@ class SQLAlchemyRepository(Repository):
         """
         self.model = model
 
+    @property
+    def _db(self):
+        """Late import of db to avoid circular imports."""
+        from app import db
+        return db
+
     def add(self, obj):
         """
         Add a new object to the database.
@@ -101,8 +106,8 @@ class SQLAlchemyRepository(Repository):
         Raises:
             SQLAlchemyError: If database operation fails
         """
-        db.session.add(obj)
-        db.session.commit()
+        self._db.session.add(obj)
+        self._db.session.commit()
 
     def get(self, obj_id):
         """
@@ -114,7 +119,7 @@ class SQLAlchemyRepository(Repository):
         Returns:
             Model instance or None if not found
         """
-        return db.session.get(self.model, obj_id)
+        return self._db.session.get(self.model, obj_id)
 
     def get_all(self):
         """
@@ -123,7 +128,7 @@ class SQLAlchemyRepository(Repository):
         Returns:
             List of all model instances
         """
-        return db.session.query(self.model).all()
+        return self._db.session.query(self.model).all()
 
     def update(self, obj_id, data):
         """
@@ -141,7 +146,7 @@ class SQLAlchemyRepository(Repository):
             # Call the model's update method
             # (handles special cases like password hashing)
             obj.update(data)
-            db.session.commit()
+            self._db.session.commit()
 
     def delete(self, obj_id):
         """
@@ -155,8 +160,8 @@ class SQLAlchemyRepository(Repository):
         """
         obj = self.get(obj_id)
         if obj:
-            db.session.delete(obj)
-            db.session.commit()
+            self._db.session.delete(obj)
+            self._db.session.commit()
 
     def get_by_attribute(self, attr_name, attr_value):
         """
@@ -169,6 +174,13 @@ class SQLAlchemyRepository(Repository):
         Returns:
             Model instance or None if not found
         """
-        return db.session.query(self.model).filter(
-            getattr(self.model, attr_name) == attr_value
+        # Use __table__.columns for database column access
+        if hasattr(self.model.__table__.columns, attr_name):
+            column = self.model.__table__.columns[attr_name]
+        else:
+            # Fallback to getattr for non-column attributes
+            column = getattr(self.model, attr_name)
+
+        return self._db.session.query(self.model).filter(
+            column == attr_value
         ).first()

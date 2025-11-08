@@ -1,24 +1,6 @@
 from flask import Flask
 from flask_restx import Api
-from app.api.v1.users import api as users_ns
-from app.api.v1.amenities import api as amenities_ns
-from app.api.v1.places import api as places_ns
-from app.api.v1.reviews import api as reviews_ns
-from app.api.v1.auth import api as auth_ns
-
-from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager
-from flask_sqlalchemy import SQLAlchemy
-
-"""
-Instantiate extensions:
-- Bcrypt for password hashing
-- JWTManager for handling JWT authentication
-- SQLAlchemy for database ORM
-"""
-bcrypt = Bcrypt()
-jwt = JWTManager()
-db = SQLAlchemy()
+from app.extensions import bcrypt, jwt, db
 
 
 def seed_admin_user(app):
@@ -78,17 +60,25 @@ def create_app(config_class="config.DevelopmentConfig"):
     app.extensions['jwt'] = jwt
     db.init_app(app)
 
-    # Seed the initial admin user
-    with app.app_context():
-        seed_admin_user(app)
+    # Import API namespaces here to avoid circular imports
+    from app.api.v1.users import api as users_ns
+    from app.api.v1.amenities import api as amenities_ns
+    from app.api.v1.places import api as places_ns
+    from app.api.v1.reviews import api as reviews_ns
+    from app.api.v1.auth import api as auth_ns
 
-    # Register the users namespace
+    # Register API namespaces
     api.add_namespace(users_ns, path='/api/v1/users')
-    # Register the amenities namespace
     api.add_namespace(amenities_ns, path='/api/v1/amenities')
-    # Register the places namespace
     api.add_namespace(places_ns, path='/api/v1/places')
-    # Register the reviews namespace
     api.add_namespace(reviews_ns, path='/api/v1/reviews')
     api.add_namespace(auth_ns, path='/api/v1/auth')
+
+    # Initialize database and seed admin user
+    with app.app_context():
+        # Import models to register them with SQLAlchemy
+        from app import models  # noqa: F401
+        db.create_all()  # Create tables before seeding
+        seed_admin_user(app)
+
     return app
