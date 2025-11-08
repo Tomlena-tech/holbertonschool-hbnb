@@ -6,7 +6,7 @@ This project implements a modular HBnB (Holberton BnB) application with a clear 
 
 - **Presentation Layer (API)**: Handles HTTP requests and responses
 - **Business Logic Layer (Models & Services)**: Contains the core business logic
-- **Persistence Layer**: Manages data storage (currently in-memory, will be database-backed in Part 3)
+- **Persistence Layer**: Manages data storage with SQLAlchemy ORM (SQLite for development, MySQL for production)
 
 ## Project Structure
 
