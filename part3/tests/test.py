@@ -38,6 +38,12 @@ Test Coverage:
         - Bidirectional relationships testing
         - Many-to-many relationship testing
         - Unique constraint enforcement
+    - Task 9: SQL Scripts for Table Generation and Initial Data
+        - SQL files existence validation
+        - Schema script table creation
+        - Seed script data insertion
+        - Admin user seeding verification
+        - Initial amenities seeding
 """
 
 import sys
@@ -2464,6 +2470,344 @@ def test_8_6_unique_constraints():
 
 
 # ============================================================================
+# TASK 9: SQL SCRIPTS FOR TABLE GENERATION AND INITIAL DATA
+# ============================================================================
+def test_task_9():
+    """Test suite for Task 9: SQL schema and seed data scripts."""
+    print_section("TASK 9: SQL SCRIPTS FOR TABLE GENERATION AND INITIAL DATA")
+
+    test_9_1_sql_files_exist()
+    test_9_2_schema_script_validation()
+    test_9_3_seed_script_validation()
+    test_9_4_admin_user_seeded()
+    test_9_5_amenities_seeded()
+
+
+# 9.1: SQL Files Exist
+def test_9_1_sql_files_exist():
+    """Test that required SQL files exist."""
+    print_subsection("Test 9.1: SQL Files Exist")
+
+    import os
+
+    schema_file = os.path.join(os.path.dirname(__file__), '..', 'schema.sql')
+    seed_file = os.path.join(os.path.dirname(__file__), '..', 'seed.sql')
+
+    runner.assert_true(
+        os.path.exists(schema_file),
+        "schema.sql file exists",
+        f"File found at: {schema_file}",
+        f"File not found at: {schema_file}"
+    )
+
+    runner.assert_true(
+        os.path.exists(seed_file),
+        "seed.sql file exists",
+        f"File found at: {seed_file}",
+        f"File not found at: {seed_file}"
+    )
+
+
+# 9.2: Schema Script Validation
+def test_9_2_schema_script_validation():
+    """Test that schema.sql creates all required tables."""
+    print_subsection("Test 9.2: Schema Script Validation")
+
+    import os
+    import sqlite3
+    import tempfile
+
+    schema_file = os.path.join(os.path.dirname(__file__), '..', 'schema.sql')
+
+    # Create temporary database
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp:
+        tmp_db = tmp.name
+
+    try:
+        # Execute schema script
+        conn = sqlite3.connect(tmp_db)
+        with open(schema_file, 'r') as f:
+            schema_sql = f.read()
+        conn.executescript(schema_sql)
+
+        # Get table names
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        tables = {row[0] for row in cursor.fetchall()}
+
+        runner.assert_true(
+            'users' in tables,
+            "users table created",
+            "Table 'users' found",
+            "Table 'users' not found"
+        )
+
+        runner.assert_true(
+            'places' in tables,
+            "places table created",
+            "Table 'places' found",
+            "Table 'places' not found"
+        )
+
+        runner.assert_true(
+            'reviews' in tables,
+            "reviews table created",
+            "Table 'reviews' found",
+            "Table 'reviews' not found"
+        )
+
+        runner.assert_true(
+            'amenities' in tables,
+            "amenities table created",
+            "Table 'amenities' found",
+            "Table 'amenities' not found"
+        )
+
+        runner.assert_true(
+            'place_amenity' in tables,
+            "place_amenity table created",
+            "Table 'place_amenity' found",
+            "Table 'place_amenity' not found"
+        )
+
+        # Verify users table structure
+        cursor.execute("PRAGMA table_info(users)")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        required_user_columns = {'id', 'first_name', 'last_name', 'email', 'password', 'is_admin'}
+        runner.assert_true(
+            required_user_columns.issubset(columns),
+            "users table has all required columns",
+            f"All columns present: {required_user_columns}",
+            f"Missing columns: {required_user_columns - columns}"
+        )
+
+        conn.close()
+    finally:
+        # Cleanup
+        if os.path.exists(tmp_db):
+            os.unlink(tmp_db)
+
+
+# 9.3: Seed Script Validation
+def test_9_3_seed_script_validation():
+    """Test that seed.sql inserts initial data correctly."""
+    print_subsection("Test 9.3: Seed Script Validation")
+
+    import os
+    import sqlite3
+    import tempfile
+
+    schema_file = os.path.join(os.path.dirname(__file__), '..', 'schema.sql')
+    seed_file = os.path.join(os.path.dirname(__file__), '..', 'seed.sql')
+
+    # Create temporary database
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp:
+        tmp_db = tmp.name
+
+    try:
+        # Execute schema and seed scripts
+        conn = sqlite3.connect(tmp_db)
+
+        with open(schema_file, 'r') as f:
+            schema_sql = f.read()
+        conn.executescript(schema_sql)
+
+        with open(seed_file, 'r') as f:
+            seed_sql = f.read()
+        conn.executescript(seed_sql)
+
+        cursor = conn.cursor()
+
+        # Check user count
+        cursor.execute("SELECT COUNT(*) FROM users")
+        user_count = cursor.fetchone()[0]
+
+        runner.assert_true(
+            user_count >= 1,
+            "At least one user seeded",
+            f"Found {user_count} user(s)",
+            f"No users found"
+        )
+
+        # Check amenities count
+        cursor.execute("SELECT COUNT(*) FROM amenities")
+        amenity_count = cursor.fetchone()[0]
+
+        runner.assert_true(
+            amenity_count >= 3,
+            "At least three amenities seeded",
+            f"Found {amenity_count} amenities",
+            f"Only {amenity_count} amenities found (expected >= 3)"
+        )
+
+        conn.close()
+    finally:
+        # Cleanup
+        if os.path.exists(tmp_db):
+            os.unlink(tmp_db)
+
+
+# 9.4: Admin User Seeded
+def test_9_4_admin_user_seeded():
+    """Test that admin user is properly seeded with correct attributes."""
+    print_subsection("Test 9.4: Admin User Seeded")
+
+    import os
+    import sqlite3
+    import tempfile
+
+    schema_file = os.path.join(os.path.dirname(__file__), '..', 'schema.sql')
+    seed_file = os.path.join(os.path.dirname(__file__), '..', 'seed.sql')
+
+    # Create temporary database
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp:
+        tmp_db = tmp.name
+
+    try:
+        # Execute schema and seed scripts
+        conn = sqlite3.connect(tmp_db)
+
+        with open(schema_file, 'r') as f:
+            schema_sql = f.read()
+        conn.executescript(schema_sql)
+
+        with open(seed_file, 'r') as f:
+            seed_sql = f.read()
+        conn.executescript(seed_sql)
+
+        cursor = conn.cursor()
+
+        # Check admin user
+        cursor.execute("SELECT * FROM users WHERE email = 'admin@hbnb.io'")
+        admin = cursor.fetchone()
+
+        runner.assert_true(
+            admin is not None,
+            "Admin user exists",
+            "Admin user found with email admin@hbnb.io",
+            "Admin user not found"
+        )
+
+        if admin:
+            # admin row: (id, first_name, last_name, email, password, is_admin, created_at, updated_at)
+            admin_id, first_name, last_name, email, password, is_admin, created_at, updated_at = admin
+
+            runner.assert_equal(
+                admin_id,
+                '36c9050e-ddd3-4c3b-9731-9f487208bbc1',
+                "Admin user has correct fixed UUID",
+                ""
+            )
+
+            runner.assert_equal(
+                first_name,
+                'Admin',
+                "Admin user first_name is 'Admin'",
+                ""
+            )
+
+            runner.assert_equal(
+                last_name,
+                'HBnB',
+                "Admin user last_name is 'HBnB'",
+                ""
+            )
+
+            runner.assert_true(
+                is_admin == 1 or is_admin == True,
+                "Admin user has is_admin=True",
+                "Admin privileges confirmed",
+                f"is_admin value: {is_admin}"
+            )
+
+            runner.assert_true(
+                password.startswith('$2b$'),
+                "Admin password is bcrypt hashed",
+                "Password hash format correct",
+                f"Password doesn't appear to be bcrypt hashed: {password[:20]}..."
+            )
+
+        conn.close()
+    finally:
+        # Cleanup
+        if os.path.exists(tmp_db):
+            os.unlink(tmp_db)
+
+
+# 9.5: Amenities Seeded
+def test_9_5_amenities_seeded():
+    """Test that initial amenities are properly seeded."""
+    print_subsection("Test 9.5: Amenities Seeded")
+
+    import os
+    import sqlite3
+    import tempfile
+
+    schema_file = os.path.join(os.path.dirname(__file__), '..', 'schema.sql')
+    seed_file = os.path.join(os.path.dirname(__file__), '..', 'seed.sql')
+
+    # Create temporary database
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp:
+        tmp_db = tmp.name
+
+    try:
+        # Execute schema and seed scripts
+        conn = sqlite3.connect(tmp_db)
+
+        with open(schema_file, 'r') as f:
+            schema_sql = f.read()
+        conn.executescript(schema_sql)
+
+        with open(seed_file, 'r') as f:
+            seed_sql = f.read()
+        conn.executescript(seed_sql)
+
+        cursor = conn.cursor()
+
+        # Check amenities
+        cursor.execute("SELECT name FROM amenities ORDER BY name")
+        amenities = [row[0] for row in cursor.fetchall()]
+
+        expected_amenities = {'WiFi', 'Swimming Pool', 'Air Conditioning'}
+        actual_amenities = set(amenities)
+
+        runner.assert_true(
+            expected_amenities.issubset(actual_amenities),
+            "Required amenities seeded",
+            f"Found amenities: {actual_amenities}",
+            f"Missing amenities: {expected_amenities - actual_amenities}"
+        )
+
+        runner.assert_true(
+            'WiFi' in amenities,
+            "WiFi amenity seeded",
+            "WiFi found in amenities",
+            "WiFi not found"
+        )
+
+        runner.assert_true(
+            'Swimming Pool' in amenities,
+            "Swimming Pool amenity seeded",
+            "Swimming Pool found in amenities",
+            "Swimming Pool not found"
+        )
+
+        runner.assert_true(
+            'Air Conditioning' in amenities,
+            "Air Conditioning amenity seeded",
+            "Air Conditioning found in amenities",
+            "Air Conditioning not found"
+        )
+
+        conn.close()
+    finally:
+        # Cleanup
+        if os.path.exists(tmp_db):
+            os.unlink(tmp_db)
+
+
+# ============================================================================
 # MAIN TEST EXECUTION
 # ============================================================================
 if __name__ == "__main__":
@@ -2495,6 +2839,9 @@ if __name__ == "__main__":
 
     # Task 8: Entity Relationships with SQLAlchemy (includes all subtasks)
     test_task_8()
+
+    # Task 9: SQL Scripts for Table Generation and Initial Data (includes all subtasks)
+    test_task_9()
 
     # Print summary
     runner.print_summary()
