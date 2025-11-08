@@ -1,10 +1,11 @@
 from .base_model import BaseModel
 from .user import User
+from app.extensions import db
 
 
 class Place(BaseModel):
     """
-    Represents a place / accommodation.
+    Represents a place / accommodation with SQLAlchemy ORM mapping.
 
     Inherits from:
         BaseModel: provides `id`, `created_at`, `updated_at`, `save()` and
@@ -23,6 +24,15 @@ class Place(BaseModel):
             related to this place.
         amenities (list): list of amenities related to this place.
     """
+
+    __tablename__ = 'places'
+
+    # SQLAlchemy column mappings (no relationships yet - Task 8)
+    _title = db.Column('title', db.String(100), nullable=False)
+    _description = db.Column('description', db.Text, nullable=True)
+    _price = db.Column('price', db.Float, nullable=False)
+    _latitude = db.Column('latitude', db.Float, nullable=False)
+    _longitude = db.Column('longitude', db.Float, nullable=False)
 
     def __init__(
         self,
@@ -63,7 +73,7 @@ class Place(BaseModel):
     @property
     def title(self):
         """str: The title of the place (<= 100 characters)."""
-        return self.__title
+        return self._title
 
     @title.setter
     def title(self, value):
@@ -78,12 +88,12 @@ class Place(BaseModel):
         if not isinstance(value, str):
             raise TypeError("Title must be a string")
         super().is_max_length('title', value, 100)
-        self.__title = value
+        self._title = value
 
     @property
     def description(self):
         """str: Long-form description of the place."""
-        return self.__description
+        return self._description
 
     @description.setter
     def description(self, value):
@@ -92,12 +102,12 @@ class Place(BaseModel):
         """
         if value is not None and not isinstance(value, str):
             raise TypeError("Description must be a string")
-        self.__description = value
+        self._description = value
 
     @property
     def price(self):
         """float: Price per night (non-negative)."""
-        return self.__price
+        return self._price
 
     @price.setter
     def price(self, value):
@@ -111,12 +121,12 @@ class Place(BaseModel):
             raise TypeError("Price must be a float")
         if value < 0:
             raise ValueError("Price must be positive.")
-        self.__price = float(value)
+        self._price = float(value)
 
     @property
     def latitude(self):
         """float: Latitude coordinate (-90.0, 90.0 exclusive)."""
-        return self.__latitude
+        return self._latitude
 
     @latitude.setter
     def latitude(self, value):
@@ -129,12 +139,12 @@ class Place(BaseModel):
         if not isinstance(value, float):
             raise TypeError("Latitude must be a float")
         super().is_in_range("latitude", value, -90.0, 90.0)
-        self.__latitude = float(value)
+        self._latitude = float(value)
 
     @property
     def longitude(self):
         """float: Longitude coordinate (-180.0, 180.0 exclusive)."""
-        return self.__longitude
+        return self._longitude
 
     @longitude.setter
     def longitude(self, value):
@@ -147,7 +157,7 @@ class Place(BaseModel):
         if not isinstance(value, float):
             raise TypeError("Longitude must be a float")
         super().is_in_range("longitude", value, -180.0, 180.0)
-        self.__longitude = float(value)
+        self._longitude = float(value)
 
     @property
     def owner(self):

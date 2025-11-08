@@ -1221,6 +1221,300 @@ Admin user created: admin@hbnb.io
 
 ---
 
+## Issue #8: Database Mapping for Place, Review, and Amenity Models
+
+**🏷️ Category**: Database | Task 7
+**📅 Date**: November 2025
+**⚡ Severity**: Medium
+**✅ Status**: Resolved
+
+### Problem Statement
+
+After successfully mapping the User model to the database in Task 6, the remaining models (Place, Review, and Amenity) needed to be migrated from in-memory storage to SQLAlchemy ORM mappings while preserving existing validation logic and maintaining backward compatibility.
+
+### Solution
+
+Implemented SQLAlchemy table mappings for all three remaining models following the same pattern established in Task 6, using private attributes for column storage and public properties for validation.
+
+### Files Modified
+
+#### 1. **`app/models/amenity.py`** - Amenity Model Mapping
+
+**Changes**:
+- Added `from app.extensions import db`
+- Added `__tablename__ = 'amenities'`
+- Mapped `name` column with unique constraint
+- Updated property to use `_name` instead of `__name`
+
+**Column Definition**:
+```python
+_name = db.Column('name', db.String(50), nullable=False, unique=True)
+```
+
+**Key Features**:
+- Maximum length: 50 characters
+- Unique constraint prevents duplicate amenity names
+- Validation logic preserved
+
+#### 2. **`app/models/place.py`** - Place Model Mapping
+
+**Changes**:
+- Added `from app.extensions import db`
+- Added `__tablename__ = 'places'`
+- Mapped 5 columns to private attributes
+- Updated all property getters/setters
+
+**Column Mappings**:
+```python
+_title = db.Column('title', db.String(100), nullable=False)
+_description = db.Column('description', db.Text, nullable=True)
+_price = db.Column('price', db.Float, nullable=False)
+_latitude = db.Column('latitude', db.Float, nullable=False)
+_longitude = db.Column('longitude', db.Float, nullable=False)
+```
+
+**Note**: Owner relationship (foreign key) deferred to Task 8
+
+#### 3. **`app/models/review.py`** - Review Model Mapping
+
+**Changes**:
+- Added `from app.extensions import db`
+- Added `__tablename__ = 'reviews'`
+- Mapped 2 columns to private attributes
+
+**Column Mappings**:
+```python
+_text = db.Column('text', db.Text, nullable=False)
+_rating = db.Column('rating', db.Integer, nullable=False)
+```
+
+**Note**: Foreign keys (user_id, place_id) deferred to Task 8
+
+#### 4. **`app/models/__init__.py`** - Models Package Update
+
+**Before**:
+```python
+from app.models.user import User
+__all__ = ['User']
+```
+
+**After**:
+```python
+from app.models.user import User
+from app.models.amenity import Amenity
+from app.models.place import Place
+from app.models.review import Review
+
+__all__ = ['User', 'Amenity', 'Place', 'Review']
+```
+
+**Purpose**: Ensures all models are imported and registered with SQLAlchemy before `db.create_all()`
+
+### Database Schema Created
+
+**Amenities Table**:
+```sql
+CREATE TABLE amenities (
+    name VARCHAR(50) NOT NULL,
+    id VARCHAR(36) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE (name)
+)
+```
+
+**Places Table**:
+```sql
+CREATE TABLE places (
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    price FLOAT NOT NULL,
+    latitude FLOAT NOT NULL,
+    longitude FLOAT NOT NULL,
+    id VARCHAR(36) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id)
+)
+```
+
+**Reviews Table**:
+```sql
+CREATE TABLE reviews (
+    text TEXT NOT NULL,
+    rating INTEGER NOT NULL,
+    id VARCHAR(36) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id)
+)
+```
+
+### Design Rationale
+
+| Decision | Rationale |
+|----------|-----------|
+| **Follow Task 6 Pattern** | Consistency across all models, proven approach |
+| **Private Attributes** | Enables property-based validation while supporting ORM |
+| **Defer Relationships** | Task separation: columns in Task 7, relationships in Task 8 |
+| **Preserve Validation** | All existing business logic remains intact |
+| **Unique Name Constraint** | Database-level enforcement prevents duplicate amenities |
+
+### Architecture Benefits
+
+**Consistency**:
+- All models follow same mapping pattern
+- Private attributes (`_name`) for storage
+- Public properties for validation
+- Inherited from BaseModel
+
+**Backward Compatibility**:
+- No changes to API endpoints
+- Property interfaces unchanged
+- Validation logic preserved
+- Existing tests continue to pass
+
+**Scalability**:
+- Pattern reusable for future models
+- Easy to add indexes and constraints
+- Database-agnostic (SQLite, PostgreSQL, MySQL)
+
+### Testing Results
+
+✅ **Model Imports**
+```python
+from app.models import User, Amenity, Place, Review
+# All models import successfully
+```
+
+✅ **Tables Created**
+```
+Database tables: ['amenities', 'places', 'reviews', 'users']
+```
+
+✅ **Column Mappings**
+- Amenity: name (VARCHAR(50), UNIQUE)
+- Place: title, description, price, latitude, longitude
+- Review: text (TEXT), rating (INTEGER)
+- All tables: id, created_at, updated_at (from BaseModel)
+
+✅ **Validation Preserved**
+- Amenity name validation (type, empty, max 50)
+- Place validations (title, price, coordinates)
+- Review validations (text, rating range 1-5)
+
+✅ **Application Startup**
+- No errors during initialization
+- All tables created successfully
+- Admin user seeding works
+
+### Implementation Checklist
+
+✅ **Amenity Model**:
+- [x] Added `__tablename__`
+- [x] Mapped `name` column with unique constraint
+- [x] Updated property to use `_name`
+- [x] Preserved validation logic
+
+✅ **Place Model**:
+- [x] Added `__tablename__`
+- [x] Mapped 5 core attribute columns
+- [x] Updated all properties to use private attributes
+- [x] Preserved all validation logic
+- [x] Deferred owner relationship to Task 8
+
+✅ **Review Model**:
+- [x] Added `__tablename__`
+- [x] Mapped text and rating columns
+- [x] Updated properties to use private attributes
+- [x] Preserved validation logic
+- [x] Deferred foreign keys to Task 8
+
+✅ **Models Package**:
+- [x] Imported all models
+- [x] Updated `__all__` export list
+- [x] Models registered with SQLAlchemy
+
+### Code Quality
+
+✅ **Documentation**: Docstrings added to model classes
+✅ **Consistency**: Same pattern as User model (Task 6)
+✅ **Validation**: All business rules preserved
+✅ **No Breaking Changes**: API endpoints unchanged
+✅ **Clean Code**: Clear separation of storage and interface
+
+### Lessons Learned
+
+1. **Incremental Migration**: Mapping models before adding relationships reduces complexity
+2. **Pattern Consistency**: Following established patterns speeds up implementation
+3. **Property Pattern**: Private attributes with public properties work well with SQLAlchemy
+4. **Task Separation**: Separating column mapping (Task 7) from relationships (Task 8) improves clarity
+5. **Import Order**: Models must be imported before `db.create_all()` for table creation
+
+### Next Steps (Task 8)
+
+1. Add foreign key columns:
+   - `Place.owner_id` → references `User.id`
+   - `Review.user_id` → references `User.id`
+   - `Review.place_id` → references `Place.id`
+
+2. Add SQLAlchemy relationships:
+   - User → Place (one-to-many)
+   - Place → Review (one-to-many)
+   - User → Review (one-to-many)
+   - Place ↔ Amenity (many-to-many with association table)
+
+3. Create association table for Place↔Amenity relationship
+
+---
+
+## 📊 Summary Statistics
+
+| Metric | Count |
+|--------|-------|
+| Total Issues | 8 |
+| Critical | 1 |
+| High Severity | 3 |
+| Medium Severity | 4 |
+| Resolved | 8 |
+| Open | 0 |
+
+### Issues by Category
+
+- 🏗️ **Architecture**: 4 issues (50%)
+- 🔒 **Security**: 2 issues (25%)
+- 🧪 **Testing**: 1 issue (12.5%)
+- 💾 **Database**: 1 issue (12.5%)
+
+### Resolution Time
+
+All issues resolved during development phase (November 2025)
+
+---
+
+## 📚 References
+
+### Security Resources
+- [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+- [Bcrypt Wikipedia](https://en.wikipedia.org/wiki/Bcrypt)
+- [Flask-Bcrypt Documentation](https://flask-bcrypt.readthedocs.io/)
+
+### Flask Resources
+- [Flask Application Context](https://flask.palletsprojects.com/en/2.3.x/appcontext/)
+- [Flask-JWT-Extended Custom Claims](https://flask-jwt-extended.readthedocs.io/en/stable/custom_decorators/)
+
+### Testing Resources
+- [Python sys.path Documentation](https://docs.python.org/3/library/sys.html#sys.path)
+- [Python unittest Documentation](https://docs.python.org/3/library/unittest.html)
+
+### Database Resources
+- [Flask-SQLAlchemy Documentation](https://flask-sqlalchemy.palletsprojects.com/)
+- [SQLAlchemy ORM Tutorial](https://docs.sqlalchemy.org/en/20/orm/tutorial.html)
+- [Flask Application Factories](https://flask.palletsprojects.com/en/latest/patterns/appfactories/)
+
+---
+
 **Document Status**: ✅ Complete
 **Last Review**: November 2025
 **Next Review**: Before Part 4 Development

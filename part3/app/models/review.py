@@ -1,10 +1,22 @@
-
 from .base_model import BaseModel
 from .place import Place
 from .user import User
+from app.extensions import db
 
 
 class Review(BaseModel):
+    """
+    Review model with SQLAlchemy ORM mapping.
+
+    Represents a review written by a user about a place.
+    """
+
+    __tablename__ = 'reviews'
+
+    # SQLAlchemy column mappings (no relationships yet - Task 8)
+    _text = db.Column('text', db.Text, nullable=False)
+    _rating = db.Column('rating', db.Integer, nullable=False)
+
     def __init__(self, text, rating, place, user):
         super().__init__()
         self.text = text
@@ -14,7 +26,7 @@ class Review(BaseModel):
 
     @property
     def text(self):
-        return self.__text
+        return self._text
 
     @text.setter
     def text(self, value):
@@ -22,18 +34,18 @@ class Review(BaseModel):
             raise ValueError("Text cannot be empty")
         if not isinstance(value, str):
             raise TypeError("Text must be a string")
-        self.__text = value
+        self._text = value
 
     @property
     def rating(self):
-        return self.__rating
+        return self._rating
 
     @rating.setter
     def rating(self, value):
         if not isinstance(value, int):
             raise TypeError("Rating must be an integer")
         super().is_in_range('Rating', value, 0, 6)
-        self.__rating = value
+        self._rating = value
 
     @property
     def place(self):

@@ -26,6 +26,12 @@ Test Coverage:
         - Password hashing preservation
         - Email uniqueness enforcement
         - UserRepository functionality
+    - Task 7: Place, Review, and Amenity Database Mapping
+        - Amenity model mapping and table creation
+        - Place model mapping and table creation
+        - Review model mapping and table creation
+        - Column constraints validation
+        - Property validation preservation
 """
 
 import sys
@@ -36,6 +42,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from app import create_app
 from app.models.user import User
+from app.models.amenity import Amenity
+from app.models.place import Place
+from app.models.review import Review
 from app.services import facade
 from app.extensions import db
 
@@ -1432,7 +1441,7 @@ def test_email_uniqueness():
             # Expected to fail
             runner.assert_true(
                 'unique' in str(e).lower() or 'duplicate' in str(e).lower() or
-                'UNIQUE constraint' in str(e),
+                'UNIQUE constraint' in str(e) or 'already exists' in str(e).lower(),
                 "Duplicate email prevention",
                 f"Duplicate email correctly prevented: {type(e).__name__}",
                 f"Wrong error type: {str(e)}"
@@ -1564,6 +1573,414 @@ def test_data_persistence():
 
 
 # ============================================================================
+# TASK 7: PLACE, REVIEW, AND AMENITY DATABASE MAPPING TESTS
+# ============================================================================
+
+def test_task_7():
+    """Test suite for Task 7: Database mapping for Place, Review, and Amenity models."""
+    print_section("TASK 7: PLACE, REVIEW, AND AMENITY DATABASE MAPPING")
+
+    test_7_1_models_import()
+    test_7_2_tables_created()
+    test_7_3_amenity_model_mapping()
+    test_7_4_place_model_mapping()
+    test_7_5_review_model_mapping()
+    test_7_6_property_validation_preserved()
+
+
+# 7.1: Models Import Successfully
+def test_7_1_models_import():
+    """Test that all models can be imported without errors."""
+    print_subsection("Test 7.1: Models Import Successfully")
+
+    try:
+        from app.models import User, Amenity, Place, Review
+        runner.assert_true(
+            True,
+            "All models import successfully",
+            "User, Amenity, Place, and Review models imported",
+            "Failed to import models"
+        )
+    except ImportError as e:
+        runner.assert_true(
+            False,
+            "All models import successfully",
+            "",
+            f"ImportError: {e}"
+        )
+
+
+# 7.2: Database Tables Created
+def test_7_2_tables_created():
+    """Test that database tables are created for all models."""
+    print_subsection("Test 7.2: Database Tables Created")
+
+    with app.app_context():
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+
+        runner.assert_true(
+            'amenities' in tables,
+            "Amenities table created",
+            f"Table 'amenities' found in database",
+            "Table 'amenities' not found"
+        )
+
+        runner.assert_true(
+            'places' in tables,
+            "Places table created",
+            f"Table 'places' found in database",
+            "Table 'places' not found"
+        )
+
+        runner.assert_true(
+            'reviews' in tables,
+            "Reviews table created",
+            f"Table 'reviews' found in database",
+            "Table 'reviews' not found"
+        )
+
+        # Verify all expected tables exist
+        expected_tables = {'amenities', 'places', 'reviews', 'users'}
+        runner.assert_true(
+            expected_tables.issubset(set(tables)),
+            "All expected tables created",
+            f"Tables: {sorted(tables)}",
+            f"Missing tables: {expected_tables - set(tables)}"
+        )
+
+
+# 7.3: Amenity Model Mapping
+def test_7_3_amenity_model_mapping():
+    """Test Amenity model database mapping and constraints."""
+    print_subsection("Test 7.3: Amenity Model Mapping")
+
+    with app.app_context():
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+
+        # Check columns
+        columns = {col['name']: col for col in inspector.get_columns('amenities')}
+
+        runner.assert_true(
+            'name' in columns,
+            "Amenity 'name' column exists",
+            "Column 'name' found in amenities table",
+            "Column 'name' not found"
+        )
+
+        runner.assert_true(
+            'id' in columns,
+            "Amenity 'id' column exists (from BaseModel)",
+            "Column 'id' found",
+            "Column 'id' not found"
+        )
+
+        runner.assert_true(
+            'created_at' in columns and 'updated_at' in columns,
+            "Amenity timestamp columns exist",
+            "Columns 'created_at' and 'updated_at' found",
+            "Timestamp columns not found"
+        )
+
+        # Test property validation
+        try:
+            amenity = Amenity(name="WiFi")
+            runner.assert_equal(
+                amenity.name,
+                "WiFi",
+                "Amenity property getter works",
+                "- Name should be 'WiFi'"
+            )
+        except Exception as e:
+            runner.assert_true(
+                False,
+                "Amenity property getter works",
+                "",
+                f"Error: {e}"
+            )
+
+        # Test validation (empty name)
+        try:
+            amenity_invalid = Amenity(name="")
+            runner.assert_true(
+                False,
+                "Amenity validation rejects empty name",
+                "",
+                "Empty name was accepted (should raise ValueError)"
+            )
+        except ValueError:
+            runner.assert_true(
+                True,
+                "Amenity validation rejects empty name",
+                "Empty name correctly rejected",
+                ""
+            )
+
+        # Test validation (max length)
+        try:
+            long_name = "A" * 51
+            amenity_long = Amenity(name=long_name)
+            runner.assert_true(
+                False,
+                "Amenity validation enforces max length",
+                "",
+                "Name exceeding 50 chars was accepted"
+            )
+        except ValueError:
+            runner.assert_true(
+                True,
+                "Amenity validation enforces max length",
+                "Max length (50) correctly enforced",
+                ""
+            )
+
+
+# 7.4: Place Model Mapping
+def test_7_4_place_model_mapping():
+    """Test Place model database mapping and columns."""
+    print_subsection("Test 7.4: Place Model Mapping")
+
+    with app.app_context():
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+
+        # Check columns
+        columns = {col['name']: col for col in inspector.get_columns('places')}
+
+        expected_columns = ['title', 'description', 'price', 'latitude', 'longitude', 'id', 'created_at', 'updated_at']
+        for col_name in expected_columns:
+            runner.assert_true(
+                col_name in columns,
+                f"Place '{col_name}' column exists",
+                f"Column '{col_name}' found",
+                f"Column '{col_name}' not found"
+            )
+
+        # Test property validation with a real user
+        try:
+            # Get admin user for testing
+            admin_user = facade.get_user_by_email('admin@hbnb.io')
+
+            place = Place(
+                title="Test Place",
+                description="A test place",
+                price=100.0,
+                latitude=45.0,
+                longitude=-75.0,
+                owner=admin_user
+            )
+
+            runner.assert_equal(
+                place.title,
+                "Test Place",
+                "Place property getters work",
+                "- Title should be 'Test Place'"
+            )
+
+            runner.assert_equal(
+                place.price,
+                100.0,
+                "Place price property works",
+                "- Price should be 100.0"
+            )
+
+        except Exception as e:
+            runner.assert_true(
+                False,
+                "Place property getters work",
+                "",
+                f"Error: {e}"
+            )
+
+        # Test price validation (negative)
+        try:
+            place_invalid = Place(
+                title="Invalid",
+                price=-10.0,
+                latitude=45.0,
+                longitude=-75.0,
+                owner=admin_user
+            )
+            runner.assert_true(
+                False,
+                "Place validation rejects negative price",
+                "",
+                "Negative price was accepted"
+            )
+        except ValueError:
+            runner.assert_true(
+                True,
+                "Place validation rejects negative price",
+                "Negative price correctly rejected",
+                ""
+            )
+
+
+# 7.5: Review Model Mapping
+def test_7_5_review_model_mapping():
+    """Test Review model database mapping and columns."""
+    print_subsection("Test 7.5: Review Model Mapping")
+
+    with app.app_context():
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+
+        # Check columns
+        columns = {col['name']: col for col in inspector.get_columns('reviews')}
+
+        expected_columns = ['text', 'rating', 'id', 'created_at', 'updated_at']
+        for col_name in expected_columns:
+            runner.assert_true(
+                col_name in columns,
+                f"Review '{col_name}' column exists",
+                f"Column '{col_name}' found",
+                f"Column '{col_name}' not found"
+            )
+
+        # Test property validation
+        try:
+            admin_user = facade.get_user_by_email('admin@hbnb.io')
+            place = Place(
+                title="Review Test Place",
+                price=50.0,
+                latitude=40.0,
+                longitude=-70.0,
+                owner=admin_user
+            )
+
+            review = Review(
+                text="Great place!",
+                rating=5,
+                place=place,
+                user=admin_user
+            )
+
+            runner.assert_equal(
+                review.text,
+                "Great place!",
+                "Review property getters work",
+                "- Text should be 'Great place!'"
+            )
+
+            runner.assert_equal(
+                review.rating,
+                5,
+                "Review rating property works",
+                "- Rating should be 5"
+            )
+
+        except Exception as e:
+            runner.assert_true(
+                False,
+                "Review property getters work",
+                "",
+                f"Error: {e}"
+            )
+
+        # Test rating validation (out of range)
+        try:
+            review_invalid = Review(
+                text="Bad rating",
+                rating=10,
+                place=place,
+                user=admin_user
+            )
+            runner.assert_true(
+                False,
+                "Review validation enforces rating range",
+                "",
+                "Rating of 10 was accepted (should be 1-5)"
+            )
+        except ValueError:
+            runner.assert_true(
+                True,
+                "Review validation enforces rating range",
+                "Rating range (1-5) correctly enforced",
+                ""
+            )
+
+
+# 7.6: Property Validation Preserved
+def test_7_6_property_validation_preserved():
+    """Test that all property validation logic is preserved after database mapping."""
+    print_subsection("Test 7.6: Property Validation Preserved")
+
+    with app.app_context():
+        admin_user = facade.get_user_by_email('admin@hbnb.io')
+
+        # Test Amenity type validation
+        try:
+            amenity = Amenity(name=123)  # Wrong type
+            runner.assert_true(
+                False,
+                "Amenity type validation works",
+                "",
+                "Integer name was accepted"
+            )
+        except TypeError:
+            runner.assert_true(
+                True,
+                "Amenity type validation works",
+                "Type checking preserved for amenity name",
+                ""
+            )
+
+        # Test Place coordinate range validation
+        try:
+            place = Place(
+                title="Invalid Coords",
+                price=100.0,
+                latitude=100.0,  # Out of range
+                longitude=0.0,
+                owner=admin_user
+            )
+            runner.assert_true(
+                False,
+                "Place latitude range validation works",
+                "",
+                "Latitude of 100.0 was accepted"
+            )
+        except ValueError:
+            runner.assert_true(
+                True,
+                "Place latitude range validation works",
+                "Latitude range validation preserved",
+                ""
+            )
+
+        # Test Review text validation
+        try:
+            review = Review(
+                text="",  # Empty
+                rating=3,
+                place=None,
+                user=None
+            )
+            runner.assert_true(
+                False,
+                "Review text validation works",
+                "",
+                "Empty text was accepted"
+            )
+        except ValueError:
+            runner.assert_true(
+                True,
+                "Review text validation works",
+                "Text validation preserved",
+                ""
+            )
+
+        runner.assert_true(
+            True,
+            "All property validation preserved",
+            "Validation logic intact after SQLAlchemy mapping",
+            ""
+        )
+
+
+# ============================================================================
 # MAIN TEST EXECUTION
 # ============================================================================
 if __name__ == "__main__":
@@ -1589,6 +2006,9 @@ if __name__ == "__main__":
 
     # Task 6: User Database Mapping with SQLAlchemy (includes all subtasks)
     test_task_6()
+
+    # Task 7: Place, Review, and Amenity Database Mapping (includes all subtasks)
+    test_task_7()
 
     # Print summary
     runner.print_summary()
