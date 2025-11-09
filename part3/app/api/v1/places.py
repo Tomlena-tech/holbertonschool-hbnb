@@ -1,4 +1,5 @@
 from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app.services import facade
 
 api = Namespace('places', description='Place operations')
@@ -31,18 +32,26 @@ place_model = api.model('Place', {
     'price': fields.Float(required=True, description='Price per night'),
     'latitude': fields.Float(required=True, description='Latitude of the place'),
     'longitude': fields.Float(required=True, description='Longitude of the place'),
-    'owner_id': fields.String(required=True, description='ID of the owner'),
-    'amenities': fields.List(fields.String, required=True, description="List of amenities ID's")
+    'owner_id': fields.String(required=False, description='ID of the owner'),
+    'amenities': fields.List(fields.String, required=False, description="List of amenities ID's")
 })
+
 
 @api.route('/')
 class PlaceList(Resource):
     @api.expect(place_model, validate=True)
     @api.response(201, 'Place successfully created')
     @api.response(400, 'Invalid input data')
+    @jwt_required()
     def post(self):
         """Register a new place"""
+        current_user = get_jwt_identity()
         place_data = api.payload
+        place_data['owner_id'] = current_user
+
+        # Set amenities to empty list if not provided
+        if 'amenities' not in place_data:
+            place_data['amenities'] = []
 
         new_place = facade.create_place(place_data)
         if not new_place:
@@ -71,6 +80,7 @@ class PlaceList(Resource):
             }
             for place in places
         ], 200
+
 
 @api.route('/<place_id>')
 class PlaceResource(Resource):
@@ -112,16 +122,26 @@ class PlaceResource(Resource):
             ]
         }, 200
 
-    @api.expect(place_model, validate=True)
+    @api.expect(place_model, validate=False)
     @api.response(200, 'Place updated successfully')
     @api.response(404, 'Place not found')
     @api.response(400, 'Invalid input data')
+    @api.response(403, 'Unauthorized action')
+    @jwt_required()
     def put(self, place_id):
         """Update a place's information"""
+        current_user_id = get_jwt_identity()
+        current_user_jwt = get_jwt()
+        is_admin = current_user_jwt.get('is_admin', False)
+
         place = facade.get_place(place_id)
         if not place:
             return {'error': 'Place not found'}, 404
 
+        # Check ownership: allow if admin or owner
+        if not is_admin and place.owner.id != current_user_id:
+            return {'error': 'Unauthorized'}, 403
+
         place_data = api.payload
-        updated_place = facade.update_place(place_id, place_data)
+        facade.update_place(place_id, place_data)
         return {'message': 'Place updated successfully'}, 200

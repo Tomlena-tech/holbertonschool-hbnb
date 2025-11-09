@@ -1,17 +1,26 @@
 import uuid
 from datetime import datetime
+from app.extensions import db
 
 
-class BaseModel:
+class BaseModel(db.Model):
     """
-    BaseModel is a base class providing common attributes and methods for all
-    data models.
+    BaseModel is an abstract base class providing common attributes and methods
+    for all data models with SQLAlchemy ORM mapping.
 
     It provides:
     - Unique identification for each instance (`id`).
     - Automatic tracking of creation and modification timestamps.
     - Utility methods for updating attributes and validating values.
+    - SQLAlchemy column mappings for database persistence.
     """
+    __abstract__ = True  # Prevents table creation for BaseModel
+
+    # SQLAlchemy column mappings
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
     def __init__(self):
         """
         Initialize a new instance of BaseModel.

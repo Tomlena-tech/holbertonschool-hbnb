@@ -1,10 +1,17 @@
 from .base_model import BaseModel
 from .user import User
+from app.extensions import db
+
+# Association table for many-to-many relationship between Place and Amenity
+place_amenity = db.Table('place_amenity',
+    db.Column('place_id', db.String(36), db.ForeignKey('places.id'), primary_key=True),
+    db.Column('amenity_id', db.String(36), db.ForeignKey('amenities.id'), primary_key=True)
+)
 
 
 class Place(BaseModel):
     """
-    Represents a place / accommodation.
+    Represents a place / accommodation with SQLAlchemy ORM mapping.
 
     Inherits from:
         BaseModel: provides `id`, `created_at`, `updated_at`, `save()` and
@@ -23,6 +30,24 @@ class Place(BaseModel):
             related to this place.
         amenities (list): list of amenities related to this place.
     """
+
+    __tablename__ = 'places'
+
+    # SQLAlchemy column mappings
+    _title = db.Column('title', db.String(100), nullable=False)
+    _description = db.Column('description', db.Text, nullable=True)
+    _price = db.Column('price', db.Float, nullable=False)
+    _latitude = db.Column('latitude', db.Float, nullable=False)
+    _longitude = db.Column('longitude', db.Float, nullable=False)
+
+    # Foreign key for User relationship (one-to-many: User -> Place)
+    owner_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+
+    # Relationships
+    owner = db.relationship('User', backref='owned_places', foreign_keys=[owner_id])
+    # Note: reviews relationship is defined via backref in Review model
+    # amenities relationship for many-to-many
+    amenities_rel = db.relationship('Amenity', secondary='place_amenity', backref='places_list', lazy=True)
 
     def __init__(
         self,
@@ -54,16 +79,19 @@ class Place(BaseModel):
         self.price = price
         self.latitude = latitude
         self.longitude = longitude
+        # Set owner (SQLAlchemy will handle owner_id)
+        if not isinstance(owner, User):
+            raise TypeError("Owner must be a User instance")
         self.owner = owner
 
-        # Relationship containers
-        self.reviews = []
+        # Note: reviews and amenities_rel are managed by SQLAlchemy relationships
+        # Keeping amenities for backward compatibility with in-memory list
         self.amenities = []
 
     @property
     def title(self):
         """str: The title of the place (<= 100 characters)."""
-        return self.__title
+        return self._title
 
     @title.setter
     def title(self, value):
@@ -78,12 +106,12 @@ class Place(BaseModel):
         if not isinstance(value, str):
             raise TypeError("Title must be a string")
         super().is_max_length('title', value, 100)
-        self.__title = value
+        self._title = value
 
     @property
     def description(self):
         """str: Long-form description of the place."""
-        return self.__description
+        return self._description
 
     @description.setter
     def description(self, value):
@@ -92,12 +120,12 @@ class Place(BaseModel):
         """
         if value is not None and not isinstance(value, str):
             raise TypeError("Description must be a string")
-        self.__description = value
+        self._description = value
 
     @property
     def price(self):
         """float: Price per night (non-negative)."""
-        return self.__price
+        return self._price
 
     @price.setter
     def price(self, value):
@@ -111,12 +139,12 @@ class Place(BaseModel):
             raise TypeError("Price must be a float")
         if value < 0:
             raise ValueError("Price must be positive.")
-        self.__price = float(value)
+        self._price = float(value)
 
     @property
     def latitude(self):
         """float: Latitude coordinate (-90.0, 90.0 exclusive)."""
-        return self.__latitude
+        return self._latitude
 
     @latitude.setter
     def latitude(self, value):
@@ -129,12 +157,12 @@ class Place(BaseModel):
         if not isinstance(value, float):
             raise TypeError("Latitude must be a float")
         super().is_in_range("latitude", value, -90.0, 90.0)
-        self.__latitude = float(value)
+        self._latitude = float(value)
 
     @property
     def longitude(self):
         """float: Longitude coordinate (-180.0, 180.0 exclusive)."""
-        return self.__longitude
+        return self._longitude
 
     @longitude.setter
     def longitude(self, value):
@@ -147,24 +175,8 @@ class Place(BaseModel):
         if not isinstance(value, float):
             raise TypeError("Longitude must be a float")
         super().is_in_range("longitude", value, -180.0, 180.0)
-        self.__longitude = float(value)
+        self._longitude = float(value)
 
-    @property
-    def owner(self):
-        """User: Owner of the place (must be a User instance)."""
-        return self.__owner
-
-    @owner.setter
-    def owner(self, value):
-        """
-        Validate and set owner.
-
-        Raises:
-            TypeError: if value is not a User instance.
-        """
-        if not isinstance(value, User):
-            raise TypeError("Owner must be a User instance")
-        self.__owner = value
 
     # --- relationship helpers ---
     def add_review(self, review):
@@ -194,7 +206,7 @@ class Place(BaseModel):
             'price': self.price,
             'latitude': self.latitude,
             'longitude': self.longitude,
-            'owner_id': self.owner.id
+            'owner_id': self.owner_id
         }
 
     def to_dict_list(self):

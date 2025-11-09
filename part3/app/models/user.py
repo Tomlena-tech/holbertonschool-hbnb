@@ -1,10 +1,12 @@
 from .base_model import BaseModel
+from app.extensions import db
+from flask import current_app
 import re
 
 
 class User(BaseModel):
     """
-    Represents a user in the system.
+    Represents a user in the system with SQLAlchemy ORM mapping.
 
     Inherits from:
         BaseModel: Provides `id`, `created_at`, and `updated_at` attributes,
@@ -14,17 +16,31 @@ class User(BaseModel):
         emails (set): Tracks unique user emails across all instances to
             prevent duplicates.
 
+    Database Columns:
+        first_name (String(50)): User's first name, not nullable.
+        last_name (String(50)): User's last name, not nullable.
+        email (String(120)): Unique and validated email, not nullable.
+        password (String(128)): Hashed password, not nullable.
+        is_admin (Boolean): Admin privileges flag, default False.
+
     Instance Attributes:
-        first_name (str): User's first name (max 50 characters).
-        last_name (str): User's last name (max 50 characters).
-        email (str): Unique and validated email address.
-        is_admin (bool): Indicates whether the user has administrative privileges.
         places (list): List of places associated with the user.
         reviews (list): List of reviews authored by the user.
     """
+    __tablename__ = 'users'
+
+    # SQLAlchemy column mappings (mapped to private attributes)
+    _first_name = db.Column('first_name', db.String(50), nullable=False)
+    _last_name = db.Column('last_name', db.String(50), nullable=False)
+    _email = db.Column('email', db.String(120), nullable=False, unique=True)
+    password = db.Column(db.String(128), nullable=False)
+    _User__is_admin = db.Column('is_admin', db.Boolean, default=False,
+                                 nullable=False)
+
+    # Class attribute for in-memory email tracking
     emails = set()
 
-    def __init__(self, first_name, last_name, email, is_admin=False):
+    def __init__(self, first_name, last_name, email, password, is_admin=False):
         """
         Initialize a new User instance.
 
@@ -42,9 +58,20 @@ class User(BaseModel):
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
+        self.hash_password(password)
         self.is_admin = is_admin
         self.places = []
         self.reviews = []
+
+    def hash_password(self, password):
+        """Hashes the password before storing it."""
+        bcrypt = current_app.extensions['bcrypt']
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def verify_password(self, password):
+        """Verifies if the provided password matches the hashed password."""
+        bcrypt = current_app.extensions['bcrypt']
+        return bcrypt.check_password_hash(self.password, password)
 
     @property
     def first_name(self):
@@ -161,6 +188,21 @@ class User(BaseModel):
             ValueError: If the review is not in the user's list.
         """
         self.reviews.remove(review)
+
+    def update(self, data):
+        """
+        Update user attributes, with special handling for password hashing.
+
+        Args:
+            data (dict): A dictionary containing attribute names and their new values.
+        """
+        for key, value in data.items():
+            if key == 'password':
+                # Hash the password instead of setting it directly
+                self.hash_password(value)
+            elif hasattr(self, key):
+                setattr(self, key, value)
+        self.save()  # Update the updated_at timestamp
 
     def to_dict(self):
         """
