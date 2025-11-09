@@ -13,7 +13,11 @@ docs/
     ├── TASK_02.md              # JWT Authentication
     ├── TASK_03.md              # Authenticated User Access
     ├── TASK_04.md              # Administrator Access Control
-    └── TASK_05.md              # Database Repository Implementation
+    ├── TASK_05.md              # Database Repository Implementation
+    ├── TASK_06.md              # User Database Mapping
+    ├── TASK_07.md              # Place, Review, and Amenity Mappings
+    ├── TASK_08.md              # SQLAlchemy Entity Relationships
+    └── TASK_09.md              # SQL Scripts for Database Initialization
 ```
 
 ---
@@ -143,6 +147,90 @@ docs/
 
 ---
 
+### [Task 6: User Database Mapping](tasks/TASK_06.md)
+**Objective**: Map the User model to a database table using SQLAlchemy ORM
+
+**Topics Covered**:
+- ✅ SQLAlchemy model mapping with `db.Model`
+- ✅ Database table column definitions
+- ✅ Property-based validation preservation
+- ✅ Circular import resolution
+- ✅ Database initialization with `db.create_all()`
+
+**Key Features**:
+- User table schema with constraints
+- Specialized `UserRepository` class
+- Email-based user lookup
+- Password hashing integration
+- Admin user seeding support
+
+**Status**: ✅ Completed
+
+---
+
+### [Task 7: Place, Review, and Amenity Database Mappings](tasks/TASK_07.md)
+**Objective**: Map Place, Review, and Amenity models to database tables
+
+**Topics Covered**:
+- ✅ Multi-model database mapping
+- ✅ Column type definitions and constraints
+- ✅ Unique constraints on amenity names
+- ✅ Property validation preservation
+- ✅ Model package organization
+
+**Key Features**:
+- Amenity table with unique name constraint
+- Place table with geolocation columns
+- Review table with rating constraints
+- Complete model registration
+- Deferred relationship definitions
+
+**Status**: ✅ Completed
+
+---
+
+### [Task 8: SQLAlchemy Entity Relationships](tasks/TASK_08.md)
+**Objective**: Implement foreign keys and relationships between database entities
+
+**Topics Covered**:
+- ✅ One-to-many relationships (User-Place, User-Review, Place-Review)
+- ✅ Many-to-many relationships (Place-Amenity)
+- ✅ Foreign key constraints
+- ✅ Bidirectional relationship navigation
+- ✅ Association table pattern
+
+**Key Features**:
+- Place ownership tracking (owner_id foreign key)
+- Review authorship and association
+- Place-Amenity association table
+- Cascade delete configurations
+- Unique constraint: one review per user per place
+
+**Status**: ✅ Completed
+
+---
+
+### [Task 9: SQL Scripts for Database Initialization](tasks/TASK_09.md)
+**Objective**: Create standalone SQL scripts for schema generation and data seeding
+
+**Topics Covered**:
+- ✅ DDL scripts for table creation
+- ✅ Foreign key and constraint definitions
+- ✅ Index creation for performance
+- ✅ Admin user seeding with bcrypt hash
+- ✅ Initial amenity data population
+
+**Key Features**:
+- Complete database schema script (schema.sql)
+- Data seeding script (seed.sql)
+- Admin user with fixed UUID
+- Bcrypt-hashed admin password
+- Three initial amenities (WiFi, Pool, AC)
+
+**Status**: ✅ Completed
+
+---
+
 ## 🎯 Quick Start Guide
 
 ### For New Developers
@@ -153,6 +241,10 @@ docs/
 4. **Study Task 3** to understand authorization patterns
 5. **Review Task 4** for admin access control
 6. **Complete Task 5** for database persistence
+7. **Study Task 6** to learn User model database mapping
+8. **Review Task 7** for additional entity mappings
+9. **Examine Task 8** for entity relationships
+10. **Complete Task 9** for SQL schema and seeding scripts
 
 ### For Security Auditors
 
@@ -176,7 +268,8 @@ docs/
 | **Flask** | Web framework | [Task 0](tasks/TASK_00.md) |
 | **Flask-Bcrypt** | Password hashing | [Task 1](tasks/TASK_01.md) |
 | **Flask-JWT-Extended** | JWT authentication | [Task 2](tasks/TASK_02.md) |
-| **Flask-SQLAlchemy** | Database ORM | [Task 5](tasks/TASK_05.md) |
+| **Flask-SQLAlchemy** | Database ORM | [Tasks 5-8](tasks/TASK_05.md) |
+| **SQLAlchemy** | SQL scripts & schema | [Task 9](tasks/TASK_09.md) |
 | **Flask-RESTX** | API framework | All tasks |
 
 ---
@@ -472,6 +565,7 @@ TASK_XX.md where XX is the task number (00-10)
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | Nov 2025 | Initial documentation for Tasks 0-4 |
+| 1.1.0 | Nov 2025 | Added documentation for Tasks 5-9 (Database layer) |
 
 ---
 
@@ -483,10 +577,10 @@ TASK_XX.md where XX is the task number (00-10)
 - [x] Task 3: Authenticated User Access Endpoints
 - [x] Task 4: Administrator Access Control
 - [x] Task 5: Database Repository Implementation
-- [ ] Task 6: User Database Mapping
-- [ ] Task 7: Additional Model Mappings
-- [ ] Task 8: Database Relations
-- [ ] Task 9: SQL Database Implementation
+- [x] Task 6: User Database Mapping
+- [x] Task 7: Place, Review, and Amenity Mappings
+- [x] Task 8: SQLAlchemy Entity Relationships
+- [x] Task 9: SQL Scripts for Database Initialization
 - [ ] Task 10: ER Diagram
 
 ---
@@ -499,4 +593,4 @@ This documentation is part of the HBnB project for educational purposes.
 
 **Last Updated**: November 2025
 **Maintained by**: HBnB Development Team
-**Status**: Active Development - Part 3 (Tasks 0-5 Complete)
+**Status**: Active Development - Part 3 (Tasks 0-9 Complete)
